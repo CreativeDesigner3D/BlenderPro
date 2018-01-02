@@ -1,8 +1,12 @@
 import bpy
+import mathutils
+import bgl
+import math
 from .assembly import Assembly
 from .opengl import TextBox
 from . import utils
 from . import unit
+from bpy_extras.view3d_utils import location_3d_to_region_2d
 
 ISWALL = "ISWALL"
 ISROOMMESH = "ISROOMMESH"
@@ -76,7 +80,6 @@ class VIEW3D_HT_header(bpy.types.Header):
         obj = context.active_object
 
         row = layout.row(align=True)
-#         row.separator()
         
         row.template_header()
         
@@ -99,12 +102,12 @@ class VIEW3D_HT_header(bpy.types.Header):
         row.prop(context.space_data,"transform_manipulators",text="")
         row.prop(context.space_data,"transform_orientation",text="")
         
-        if obj:
-            if obj.type in {'MESH','CURVE'}:
-                if obj.mode == 'EDIT':
-                    layout.operator_menu_enum('fd_general.change_mode',"mode",icon='EDITMODE_HLT',text="Edit Mode")
-                else:
-                    layout.operator_menu_enum('fd_general.change_mode',"mode",icon='OBJECT_DATAMODE',text="Object Mode")
+#         if obj:
+#             if obj.type in {'MESH','CURVE'}:
+#                 if obj.mode == 'EDIT':
+#                     layout.operator_menu_enum('fd_general.change_mode',"mode",icon='EDITMODE_HLT',text="Edit Mode")
+#                 else:
+#                     layout.operator_menu_enum('fd_general.change_mode',"mode",icon='OBJECT_DATAMODE',text="Object Mode")
                 
         row = layout.row(align=True)
         row.operator('view3d.ruler',text="Ruler")
@@ -255,6 +258,9 @@ class VIEW3D_MT_selectiontools(bpy.types.Menu):
             layout.operator("object.select_all",text='Toggle De/Select',icon='MAN_TRANS')
         layout.operator("view3d.select_border",icon='BORDER_RECT')
         layout.operator("view3d.select_circle",icon='BORDER_LASSO')
+        if context.active_object and context.active_object.mode == 'EDIT':    
+            layout.separator()
+            layout.menu('VIEW3D_MT_mesh_selection',text="Mesh Selection",icon='MAN_TRANS')
 
 class VIEW3D_MT_origintools(bpy.types.Menu):
     bl_context = "objectmode"
@@ -296,6 +302,15 @@ class VIEW3D_MT_objecttools(bpy.types.Menu):
         layout.menu("VIEW3D_MT_shadetools",icon='MOD_MULTIRES')
         layout.separator()
         layout.operator("object.delete",icon='X').use_global = False
+
+class VIEW3D_MT_mesh_selection(bpy.types.Menu):
+    bl_label = "Menu"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator("mesh.select_mode",text="Vertex Select",icon='VERTEXSEL').type='VERT'
+        layout.operator("mesh.select_mode",text="Edge Select",icon='EDGESEL').type='EDGE'
+        layout.operator("mesh.select_mode",text="Face Select",icon='FACESEL').type='FACE'
 
 class OPS_viewport_options(bpy.types.Operator):
     bl_idname = "space_view3d.viewport_options"
@@ -381,11 +396,16 @@ class OPS_draw_mesh(bpy.types.Operator):
     mouse_x = 0
     mouse_y = 0
     
+    snapping_point_2d = (0,0,0)
+    placement_point_3d = (0,0,0)
+    
     drawing_plane = None
     cube = None
     ray_cast_objects = []
     placed_first_point = False
+    first_point = (0,0,0)
     selected_point = (0,0,0)
+    found_snap_point = False
     
     def cancel_drop(self,context):
         utils.delete_object_and_children(self.cube.obj_bp)
@@ -409,15 +429,42 @@ class OPS_draw_mesh(bpy.types.Operator):
     def draw_opengl(self,context):     
         region = self._window_region(context)
         
+        if self.placed_first_point:
+            help_text = "Command Help:\nLEFT CLICK: Place Second Point\nRIGHT CLICK: Cancel Command"
+        else:
+            help_text = "Command Help:\nLEFT CLICK: Place First Point\nRIGHT CLICK: Cancel Command"
+        
+        if self.found_snap_point:
+            help_text += "\n SNAP TO VERTEX"
+        
         help_box = TextBox(
             x=0,y=0,
             width=500,height=0,
             border=10,margin=100,
-            message="Command Help:\nLEFT CLICK: Place Wall\nRIGHT CLICK: Cancel Command")
+            message=help_text)
         help_box.x = (self.mouse_x + (help_box.width) / 2 + 10) - region.x
         help_box.y = (self.mouse_y - 10) - region.y
 
         help_box.draw()
+        
+        # SNAP POINT
+        bgl.glPushAttrib(bgl.GL_ENABLE_BIT)
+     
+        bgl.glColor4f(255, 0.0, 0.0, 1.0)
+        bgl.glEnable(bgl.GL_BLEND)
+         
+        bgl.glPointSize(10)
+        bgl.glBegin(bgl.GL_POINTS)
+     
+        if self.snapping_point_2d:
+            bgl.glVertex2f(self.snapping_point_2d[0], self.snapping_point_2d[1])
+     
+        bgl.glEnd()
+        bgl.glPopAttrib()
+     
+        # restore opengl defaults
+        bgl.glDisable(bgl.GL_BLEND)
+        bgl.glColor4f(0.0, 0.0, 0.0, 1.0)
 
     def event_is_place_first_point(self,event):
         if event.type == 'LEFTMOUSE' and event.value == 'PRESS' and self.placed_first_point == False:
@@ -439,14 +486,58 @@ class OPS_draw_mesh(bpy.types.Operator):
         else:
             return False
 
-    def position_cube(self,selected_point):
+    def calc_distance(self,point1,point2):
+        """ This gets the distance between two points (X,Y,Z)
+        """
+        x1, y1, z1 = point1
+        x2, y2, z2 = point2
+        
+        return math.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2) 
+
+    def get_snap_point(self,context,selected_point,selected_obj):
+        """
+            Used to set the self.snapping_point_2d for opengl and
+            Used to set the self.placement_point_3d for final placement position
+        """
+        if selected_obj is not None:
+            obj_data = selected_obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
+            mesh = obj_data
+            size = len(mesh.vertices)
+            kd = mathutils.kdtree.KDTree(size)
+            for i, v in enumerate(mesh.vertices):
+                kd.insert(selected_obj.matrix_world * v.co, i)
+            kd.balance()
+            snapping_point, index, dist = kd.find(selected_point)
+            
+            dist = self.calc_distance(snapping_point, selected_point)
+            
+            if dist > .5:
+                #TOO FAR AWAY FROM SNAP POINT
+                self.snapping_point_2d = location_3d_to_region_2d(context.region, 
+                                                                  context.space_data.region_3d, 
+                                                                  selected_point)
+                self.placement_point_3d = selected_point
+                self.found_snap_point = False
+            else:
+                #FOUND POINT TO SNAP TO
+                self.snapping_point_2d = location_3d_to_region_2d(context.region, 
+                                                                  context.space_data.region_3d, 
+                                                                  snapping_point)
+                self.placement_point_3d = snapping_point
+                self.found_snap_point = True
+                
+            bpy.data.meshes.remove(obj_data)
+        
+    def position_cube(self,context,selected_point,selected_obj):
+        self.get_snap_point(context, selected_point, selected_obj)
+        
         if not self.placed_first_point:
-            self.cube.obj_bp.location = selected_point
-            self.selected_point = selected_point
+            self.cube.obj_bp.location = self.placement_point_3d
+            self.first_point = self.placement_point_3d
         else:
-            self.cube.x_dim(value = selected_point[0] - self.selected_point[0])
-            self.cube.y_dim(value = selected_point[1] - self.selected_point[1])
-            self.cube.z_dim(value = selected_point[2] - self.selected_point[2])
+            self.cube.x_dim(value = self.placement_point_3d[0] - self.first_point[0])
+            self.cube.y_dim(value = self.placement_point_3d[1] - self.first_point[1])
+            self.cube.z_dim(value = self.placement_point_3d[2] - self.first_point[2])
             
     def modal(self, context, event):
         context.area.tag_redraw()
@@ -455,7 +546,7 @@ class OPS_draw_mesh(bpy.types.Operator):
         
         selected_point, selected_obj = utils.get_selection_point(context,event)
         
-        self.position_cube(selected_point)
+        self.position_cube(context,selected_point,selected_obj)
 
         if self.event_is_place_second_point(event):
             return self.finish(context)
@@ -608,6 +699,7 @@ def register():
     bpy.utils.register_class(VIEW3D_MT_origintools) 
     bpy.utils.register_class(VIEW3D_MT_shadetools) 
     bpy.utils.register_class(VIEW3D_MT_objecttools) 
+    bpy.utils.register_class(VIEW3D_MT_mesh_selection)  
     bpy.utils.register_class(OPS_viewport_options)
     bpy.utils.register_class(OPS_change_shademode)
     bpy.utils.register_class(OPS_draw_mesh)

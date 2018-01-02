@@ -47,7 +47,7 @@ def get_selection_point(context, event, ray_max=10000.0,objects=None,floor=None)
     region = context.region
     rv3d = context.region_data
     coord = event.mouse_region_x, event.mouse_region_y
-    print(context,context.region_data)
+
     # get the ray from the viewport and mouse
     view_vector = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
     ray_origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
