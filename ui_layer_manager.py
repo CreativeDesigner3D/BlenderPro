@@ -610,6 +610,7 @@ class SCENE_PT_outliner(Panel):
     def draw(self, context):
         scene = context.scene
         layout = self.layout
+              
         
         box = layout.box()
         col = box.column(align=True)

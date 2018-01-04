@@ -17,7 +17,8 @@ class INFO_HT_header(bpy.types.Header):
             layout.operator("screen.back_to_previous", icon='SCREEN_BACK', text="Back to Previous")
             layout.separator()
         else:
-            layout.template_ID(context.window, "screen", new="screen.new", unlink="screen.delete")
+            pass
+#             layout.template_ID(context.window, "screen", new="screen.new", unlink="screen.delete")
         layout.separator()
         if context.active_object:
             if context.active_object.mode == 'EDIT':
@@ -40,8 +41,8 @@ class INFO_HT_header(bpy.types.Header):
             row.operator("script.autoexec_warn_clear", text="Ignore")
             return
         
-        if rd.has_multiple_engines:
-            row.prop(rd, "engine", text="")        
+#         if rd.has_multiple_engines:
+#             row.prop(rd, "engine", text="")        
         
         row.label(text=scene.statistics(), translate=False)
             
@@ -59,6 +60,7 @@ class INFO_MT_menus(bpy.types.Menu):
         layout.menu("INFO_MT_edit",icon='RECOVER_AUTO',text="   Edit   ")
         layout.menu("INFO_MT_rendering",icon='RENDER_STILL',text="   Render    ")
         layout.menu("INFO_MT_help",icon='HELP',text="   Help   ")
+        layout.menu("INFO_MT_help",icon='SPLITSCREEN',text="   Interface   ")
 
 class INFO_MT_file(bpy.types.Menu):
     bl_label = "File"
