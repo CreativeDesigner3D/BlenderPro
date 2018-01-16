@@ -16,8 +16,7 @@ class INFO_HT_header(bpy.types.Header):
         if window.screen.show_fullscreen:
             layout.operator("screen.back_to_previous", icon='SCREEN_BACK', text="Back to Previous")
             layout.separator()
-        else:
-            pass
+#         else:
 #             layout.template_ID(context.window, "screen", new="screen.new", unlink="screen.delete")
         layout.separator()
         if context.active_object:
@@ -60,7 +59,7 @@ class INFO_MT_menus(bpy.types.Menu):
         layout.menu("INFO_MT_edit",icon='RECOVER_AUTO',text="   Edit   ")
         layout.menu("INFO_MT_rendering",icon='RENDER_STILL',text="   Render    ")
         layout.menu("INFO_MT_help",icon='HELP',text="   Help   ")
-        layout.menu("INFO_MT_help",icon='SPLITSCREEN',text="   Interface   ")
+        layout.menu("INFO_MT_interface",icon='SPLITSCREEN',text="   Interface   ")
 
 class INFO_MT_file(bpy.types.Menu):
     bl_label = "File"
@@ -149,6 +148,26 @@ class INFO_MT_rendering(bpy.types.Menu):
         layout.separator()
         layout.operator("info.render_settings",text="Render Settings",icon='INFO')        
         
+class INFO_MT_interface(bpy.types.Menu):
+    bl_space_type = 'VIEW3D_MT_interface'
+    bl_label = ""
+
+    def draw(self, context):
+        layout = self.layout
+        for screen in bpy.data.screens:
+            icon = 'FILE_TICK'
+            icon = 'LAYER_USED'
+            icon = 'LAYER_ACTIVE'
+            if screen.name == context.window.screen.name:
+                icon='FILE_TICK'
+            else:
+                icon='LAYER_USED'
+            layout.operator('info.change_interface',text=screen.name,icon=icon).interface_name = screen.name
+            
+        layout.separator()
+        layout.operator('info.copy_current_interface',icon='GHOST')    
+        layout.operator('info.copy_current_interface',icon='X')  
+        
 class OPS_render_settings(bpy.types.Operator): 
     bl_idname = "info.render_settings"
     bl_label = "Render Settings"
@@ -218,6 +237,56 @@ class OPS_render_settings(bpy.types.Operator):
             row = box.row()
             row.prop(bpy.data.worlds[0], "horizon_color", text="Background Color")        
         
+class OPS_change_interface(bpy.types.Operator): 
+    bl_idname = "info.change_interface"
+    bl_label = "Change Interface"
+    
+    interface_name = bpy.props.StringProperty(name="Interface Name",default = "New Interface")
+    
+    def execute(self, context):
+        context.window.screen = bpy.data.screens[self.interface_name]
+        return {'FINISHED'}
+        
+class OPS_duplicate_current_interface(bpy.types.Operator): 
+    bl_idname = "info.copy_current_interface"
+    bl_label = "Duplicate Current Interface"
+    
+    interface_name = bpy.props.StringProperty(name="Interface Name",default = "New Interface")
+    
+    def execute(self, context):
+        return {'FINISHED'}
+    
+    def check(self,context):
+        return True
+    
+    def invoke(self,context,event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width=400)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label("Enter a name for the new interface")
+        layout.prop(self,'interface_name')
+   
+class OPS_delete_current_interface(bpy.types.Operator): 
+    bl_idname = "info.delete_current_interface"
+    bl_label = "Delete Current Interface"
+    
+    def execute(self, context):
+        return {'FINISHED'}
+    
+    def check(self,context):
+        return True
+    
+    def invoke(self,context,event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width=400)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label("Enter a name for the new interface")
+        layout.prop(self,'interface_name')   
+        
 def register():
     
     bpy.utils.register_class(INFO_HT_header)
@@ -225,7 +294,11 @@ def register():
     bpy.utils.register_class(INFO_MT_file)
     bpy.utils.register_class(INFO_MT_edit)
     bpy.utils.register_class(INFO_MT_rendering)
+    bpy.utils.register_class(INFO_MT_interface)
     bpy.utils.register_class(OPS_render_settings)
+    bpy.utils.register_class(OPS_change_interface)
+    bpy.utils.register_class(OPS_duplicate_current_interface)
+    bpy.utils.register_class(OPS_delete_current_interface)
     
 def unregister():
     pass        

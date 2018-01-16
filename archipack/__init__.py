@@ -370,6 +370,15 @@ class TOOLS_PT_Archipack_Create(Panel):
         row.scale_y = 1.3        
         row.operator("view3d.draw_mesh", icon='MESH_GRID',text="Draw Cube")   
 
+        row = box.row(align=True)
+        row.scale_y = 1.3        
+        row.operator("view3d.draw_plane", icon='MESH_GRID',text="Draw Plane")   
+        
+        row = box.row(align=True)
+        row.scale_y = 1.3        
+        row.operator("view3d.draw_curve", icon='MESH_GRID',text="Draw Curve")           
+        
+        
 
 # ----------------------------------------------------
 # ALT + A menu
