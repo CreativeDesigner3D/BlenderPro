@@ -166,7 +166,7 @@ class INFO_MT_interface(bpy.types.Menu):
             
         layout.separator()
         layout.operator('info.copy_current_interface',icon='GHOST')    
-        layout.operator('info.copy_current_interface',icon='X')  
+        layout.operator('info.delete_current_interface',icon='X')  
         
 class OPS_render_settings(bpy.types.Operator): 
     bl_idname = "info.render_settings"
@@ -240,6 +240,7 @@ class OPS_render_settings(bpy.types.Operator):
 class OPS_change_interface(bpy.types.Operator): 
     bl_idname = "info.change_interface"
     bl_label = "Change Interface"
+    bl_description = "Select to change active interface layout"
     
     interface_name = bpy.props.StringProperty(name="Interface Name",default = "New Interface")
     
@@ -250,10 +251,18 @@ class OPS_change_interface(bpy.types.Operator):
 class OPS_duplicate_current_interface(bpy.types.Operator): 
     bl_idname = "info.copy_current_interface"
     bl_label = "Duplicate Current Interface"
+    bl_description = "This will copy the active interface layout"
     
     interface_name = bpy.props.StringProperty(name="Interface Name",default = "New Interface")
     
     def execute(self, context):
+        bpy.ops.screen.new()
+        context.window.screen.name = self.interface_name
+        # screen.new() doesn't set screen to be active
+        # manually have to clean up blenders renaming
+        for screen in bpy.data.screens:
+            screen.name = screen.name.replace(".001","")
+        bpy.ops.info.change_interface(interface_name = self.interface_name)
         return {'FINISHED'}
     
     def check(self,context):
@@ -271,8 +280,10 @@ class OPS_duplicate_current_interface(bpy.types.Operator):
 class OPS_delete_current_interface(bpy.types.Operator): 
     bl_idname = "info.delete_current_interface"
     bl_label = "Delete Current Interface"
+    bl_description = "This will delete the active interface layout"
     
     def execute(self, context):
+        bpy.ops.screen.delete()
         return {'FINISHED'}
     
     def check(self,context):
@@ -284,8 +295,8 @@ class OPS_delete_current_interface(bpy.types.Operator):
 
     def draw(self, context):
         layout = self.layout
-        layout.label("Enter a name for the new interface")
-        layout.prop(self,'interface_name')   
+        layout.label("Are you sure you want to delete the active interface layout")
+        layout.label("Active Interface Layout: " + context.window.screen.name)
         
 def register():
     

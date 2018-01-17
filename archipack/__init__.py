@@ -363,20 +363,7 @@ class TOOLS_PT_Archipack_Create(Panel):
 #         row.operator("archipack.floor_preset_menu",text="->Wall",icon_value=icons["floor"].icon_id).preset_operator = "archipack.floor_from_wall"
 #         row.operator("archipack.floor_preset_menu",text="",icon='CURVE_DATA').preset_operator = "archipack.floor_from_curve"
 
-        row = box.row(align=True)
-        row.label("Standard Objects")     
-        
-        row = box.row(align=True)
-        row.scale_y = 1.3        
-        row.operator("view3d.draw_mesh", icon='MESH_GRID',text="Draw Cube")   
-
-        row = box.row(align=True)
-        row.scale_y = 1.3        
-        row.operator("view3d.draw_plane", icon='MESH_GRID',text="Draw Plane")   
-        
-        row = box.row(align=True)
-        row.scale_y = 1.3        
-        row.operator("view3d.draw_curve", icon='MESH_GRID',text="Draw Curve")           
+     
         
         
 

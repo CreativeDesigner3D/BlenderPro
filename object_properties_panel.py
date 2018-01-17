@@ -4,17 +4,9 @@ from bpy.app.translations import pgettext_iface as iface_ #for decimate modifier
 from . import unit, utils
 
 enum_object_tabs = [('INFO'," ","Show the Main Information"),
-                    ('DISPLAY',"","Show Options for how the Object is Displayed"),
                     ('MATERIAL',"","Show the materials assign to the object"),
                     ('CONSTRAINTS',"","Show the constraints assigned to the object"),
-                    ('MODIFIERS',"","Show the modifiers assigned to the object"),
-                    ('MESHDATA',"","Show the Mesh Data Information"),
-                    ('CURVEDATA',"","Show the Curve Data Information"),
-                    ('TEXTDATA',"","Show the Text Data Information"),
-                    ('EMPTYDATA',"","Show the Empty Data Information"),
-                    ('LIGHTDATA',"","Show the Light Data Information"),
-                    ('CAMERADATA',"","Show the Camera Data Information"),
-                    ('DRIVERS',"","Show the Drivers assigned to the Object")]     
+                    ('MODIFIERS',"","Show the modifiers assigned to the object")]     
 
 def draw_modifier(mod,layout,obj):
     
@@ -230,11 +222,7 @@ def draw_modifier(mod,layout,obj):
             layout.separator()
     
             split = box.split()
-    
-#             col = split.column()
-#             col.prop(mod, "falloff")
-#             col.prop(mod, "force", slider=True)
-    
+
             col = split.column()
             col.operator("object.hook_reset", text="Reset")
             col.operator("object.hook_recenter", text="Recenter")
@@ -857,105 +845,258 @@ def draw_constraint(con,layout,obj):
         row = layout.row()
         row.label(con.name + " view ")            
 
+def draw_mesh_properties(layout,obj,context):
+    layout.label('Mesh Properties:',icon='OUTLINER_OB_MESH')
+
+def draw_empty_properties(layout,obj,context):
+    layout.label('Empty Properties:',icon='OUTLINER_OB_EMPTY')
+    layout.prop(obj,'empty_draw_type',text='Draw Type')
+    layout.prop(obj,'empty_draw_size')
+        
+def draw_text_properties(layout,obj,context):
+    layout.label('Text Properties:',icon='OUTLINER_OB_FONT')
+    text = obj.data
+    box = layout.box()
+    row = box.row()
+    row.label("Font Data:")
+    row = box.row()
+    row.template_ID(text, "font", open="font.open", unlink="font.unlink")
+    row = box.row()
+    row.label("Text Size:")
+    row.prop(text,"size",text="")
+    row = box.row()
+    row.prop(text,"align")
+    
+    box = layout.box()
+    row = box.row()
+    row.label("3D Font:")
+    row = box.row()
+    row.prop(text,"extrude")
+    row = box.row()
+    row.prop(text,"bevel_depth")
+        
+def draw_curve_properties(layout,obj,context):
+    layout.label('Curve Properties:',icon='OUTLINER_OB_CURVE')
+    curve = obj.data
+    layout.prop(curve,"dimensions",text="Curve Type")
+    layout.prop(curve,"fill_mode")
+    layout.prop(curve,"bevel_object")
+    if curve.bevel_object:
+        layout.prop(curve,"use_fill_caps")
+    row = layout.row(align=True)
+    row.label("Curve Resolution:")
+    row.prop(curve,"resolution_u",text="Preview")   
+    row.prop(curve,"render_resolution_u",text="Render")      
+    row = layout.row(align=True)
+    row.label("Extrude Amount:")
+    row.prop(curve,"extrude")
+    row.prop(curve,"bevel_depth")
+    row = layout.row(align=True)
+    row.prop(curve.splines[0],"use_cyclic_u",text="Close Curve")    
+    
+    if curve.bevel_depth > 0 or curve.extrude > 0:
+        layout.prop(curve,"offset")  
+        if curve.bevel_depth > 0:
+            layout.prop(curve,"bevel_resolution")  
+        row = layout.row(align=True)
+        row.label("Change Start/End:")   
+        row.prop(curve,"bevel_factor_start",text="Start")  
+        row.prop(curve,"bevel_factor_end",text="End")  
+        
+#     layout.prop(curve.splines[0],"resolution_u") # JUST USE MAIN resolution_u PROPERTY
+#     layout.prop(curve.splines[0],"use_smooth") # JUST USE OPERATOR
+
+def draw_camera_properties(layout,obj,context):
+    layout.label('Camera Properties:',icon='OUTLINER_OB_CAMERA')
+
+    cam = obj.data
+    ccam = cam.cycles
+    scene = bpy.context.scene
+    rd = scene.render
+
+    row = layout.row(align=True)
+    row.label(text="Render Size:",icon='STICKY_UVS_VERT')        
+    row.prop(rd, "resolution_x", text="X")
+    row.prop(rd, "resolution_y", text="Y")
+    row = layout.row(align=True)
+    row.label("Clipping")
+    row.prop(cam, "clip_start", text="Start")
+    row.prop(cam, "clip_end", text="End")          
+    
+    layout.prop(cam, "type", expand=False, text="Camera Type")
+    split = layout.split()
+    col = split.column()
+    if cam.type == 'PERSP':
+        row = col.row()
+        if cam.lens_unit == 'MILLIMETERS':
+            row.prop(cam, "lens")
+        elif cam.lens_unit == 'FOV':
+            row.prop(cam, "angle")
+        row.prop(cam, "lens_unit", text="")
+
+    if cam.type == 'ORTHO':
+        col.prop(cam, "ortho_scale")
+
+    if cam.type == 'PANO':
+        engine = bpy.context.scene.render.engine
+        if engine == 'CYCLES':
+            ccam = cam.cycles
+            col.prop(ccam, "panorama_type", text="Panorama Type")
+            if ccam.panorama_type == 'FISHEYE_EQUIDISTANT':
+                col.prop(ccam, "fisheye_fov")
+            elif ccam.panorama_type == 'FISHEYE_EQUISOLID':
+                row = col.row()
+                row.prop(ccam, "fisheye_lens", text="Lens")
+                row.prop(ccam, "fisheye_fov")
+        elif engine == 'BLENDER_RENDER':
+            row = col.row()
+            if cam.lens_unit == 'MILLIMETERS':
+                row.prop(cam, "lens")
+            elif cam.lens_unit == 'FOV':
+                row.prop(cam, "angle")
+            row.prop(cam, "lens_unit", text="")
+    
+    row = layout.row()
+#         row.menu("CAMERA_MT_presets", text=bpy.types.CAMERA_MT_presets.bl_label)         
+    row.prop_menu_enum(cam, "show_guide")            
+    row = layout.row()         
+    row.prop(bpy.context.scene.cycles,"film_transparent",text="Transparent Film")   
+    row.prop(context.space_data,"lock_camera",text="Lock Camera to View")
+    
+    layout.label(text="Depth of Field:")
+    row = layout.row(align=True)
+    row.prop(cam, "dof_object", text="")
+    col = row.column()
+    sub = col.row()
+    sub.active = cam.dof_object is None
+    sub.prop(cam, "dof_distance", text="Distance")
+
+def draw_light_properties(layout,obj,context):
+    layout.label('Light Properties:',icon='OUTLINER_OB_LAMP')                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+    
+    lamp = obj.data
+    clamp = lamp.cycles
+    cscene = bpy.context.scene.cycles  
+    
+    emissionNode = None
+    mathNode = None
+    
+    if "Emission" in lamp.node_tree.nodes:
+        emissionNode = lamp.node_tree.nodes["Emission"]
+    if "Math" in lamp.node_tree.nodes:
+        mathNode = lamp.node_tree.nodes["Math"]
+
+    row = layout.row()
+    row.label("Type:")     
+    row.prop(lamp, "type", expand=True)
+    
+    if lamp.type in {'POINT', 'SUN', 'SPOT'}:
+        layout.prop(lamp, "shadow_soft_size", text="Shadow Size")
+    elif lamp.type == 'AREA':
+        layout.prop(lamp, "shape", text="")
+        sub = layout.column(align=True)
+
+        if lamp.shape == 'SQUARE':
+            sub.prop(lamp, "size")
+        elif lamp.shape == 'RECTANGLE':
+            sub.prop(lamp, "size", text="Size X")
+            sub.prop(lamp, "size_y", text="Size Y")
+
+    if cscene.progressive == 'BRANCHED_PATH':
+        layout.prop(clamp, "samples")
+
+    if lamp.type == 'HEMI':
+        layout.label(text="Not supported, interpreted as sun lamp")         
+
+    if emissionNode:
+        row = layout.row()
+        split = row.split(percentage=0.3)
+        split.label("Lamp Color:")
+        split.prop(emissionNode.inputs[0],"default_value",text="")  
+        
+    row = layout.row()
+    split = row.split(percentage=0.3)
+    split.label("Lamp Strength:")            
+    if mathNode:   
+        split.prop(mathNode.inputs[0],"default_value",text="") 
+    else:          
+        split.prop(emissionNode.inputs[1], "default_value",text="")
+        
+    row = layout.row()        
+    split = row.split(percentage=0.4)     
+    split.prop(clamp, "cast_shadow",text="Cast Shadows")
+    split.prop(clamp, "use_multiple_importance_sampling")
+        
 def draw_object_properties(layout,obj,context):
     props = get_scene_props(bpy.context.scene)
-    col = layout.column(align=True)
-    box = col.box()
-    col = box.column(align=True)
-    row = col.row(align=True)
+    main_col = layout.column(align=True)
+    row = main_col.row(align=True)
     draw_object_tabs(row,obj)
-    box = col.box()
+    box = main_col.box()
     col = box.column()
     if props.tabs == 'INFO':
-        draw_object_info(col,obj)
-    if props.tabs == 'DISPLAY':
-#         box = col.box()
-        row = col.row()
-        row.prop(obj,'draw_type',expand=True)
-        box.prop(obj,'hide_select')
-        box.prop(obj,'hide')
-        box.prop(obj,'hide_render')
-        box.prop(obj,'show_x_ray',icon='GHOST_ENABLED',text='Show X-Ray')
-        box.prop(obj.cycles_visibility,'camera',icon='CAMERA_DATA',text='Show in Viewport Render')
+        draw_object_info(col,obj,context)
+        
+        if obj.type == 'MESH':
+            box = main_col.box()
+            draw_mesh_properties(box, obj, context)
+        if obj.type == 'CURVE':
+            box = main_col.box()
+            draw_curve_properties(box, obj, context)
+        if obj.type == 'FONT':
+            box = main_col.box()
+            draw_text_properties(box, obj, context)
+        if obj.type == 'EMPTY':
+            box = main_col.box()
+            draw_empty_properties(box, obj, context)
+        if obj.type == 'LAMP':
+            box = main_col.box()
+            draw_light_properties(box, obj, context)
+        if obj.type == 'CAMERA':
+            box = main_col.box()
+            draw_camera_properties(box, obj, context)        
+
     if props.tabs == 'MATERIAL':
         draw_object_materials(col,obj,context)
+        
     if props.tabs == 'CONSTRAINTS':
-#         row = col.row()
-        col.operator_menu_enum("object.constraint_add", "type", text="Add Constraint",icon='CONSTRAINT_DATA')
-#         row.operator_menu_enum("fd_object.add_constraint", "type", icon='CONSTRAINT_DATA')
-#         row.operator("fd_object.collapse_all_constraints",text="",icon='FULLSCREEN_EXIT')
+        row = col.row()
+        row.operator_menu_enum("object.constraint_add", "type", text="Add Constraint",icon='CONSTRAINT_DATA')
+        row.operator('object_props.collapse_all_constraints',text="",icon='FULLSCREEN_EXIT')
         for con in obj.constraints:
             draw_constraint(con,col,obj)
+            
     if props.tabs == 'MODIFIERS':
-#         row = col.row()
-        col.operator_menu_enum("object.modifier_add", "type",icon='MODIFIER')
-#         row.operator("fd_object.collapse_all_modifiers",text="",icon='FULLSCREEN_EXIT')
+        row = col.row()
+        row.operator_menu_enum("object.modifier_add", "type",icon='MODIFIER')
+        row.operator('object_props.collapse_all_modifiers',text="",icon='FULLSCREEN_EXIT')
         for mod in obj.modifiers:
             draw_modifier(mod,col,obj)
-    if props.tabs == 'MESHDATA':
-        pass
-    if props.tabs == 'CURVEDATA':
-        pass
-    if props.tabs == 'TEXTDATA':
-        pass
-    if props.tabs == 'EMPTYDATA':
-        pass
-    if props.tabs == 'LIGHTDATA':
-        pass
-    if props.tabs == 'CAMERADATA':
-        pass
-    if props.tabs == 'DRIVERS':
-        draw_object_drivers(col,obj)
 
 def draw_object_tabs(layout,obj):
     props = get_scene_props(bpy.context.scene)
-    layout.prop_enum(props, "tabs", 'INFO', icon="BLANK1" if props.tabs == 'INFO' else "INFO", text="Info" if props.tabs == 'INFO' else "") 
-    if obj.type == 'MESH':
-        layout.prop_enum(props, "tabs", 'DISPLAY', icon="BLANK1" if props.tabs == 'DISPLAY' else "RESTRICT_VIEW_OFF", text="Display" if props.tabs == 'DISPLAY' else "") 
-        layout.prop_enum(props, "tabs", 'MATERIAL', icon="BLANK1" if props.tabs == 'MATERIAL' else "MATERIAL", text="Material" if props.tabs == 'MATERIAL' else "") 
-        layout.prop_enum(props, "tabs", 'CONSTRAINTS', icon="BLANK1" if props.tabs == 'CONSTRAINTS' else "CONSTRAINT", text="Constraints" if props.tabs == 'CONSTRAINTS' else "") 
-        layout.prop_enum(props, "tabs", 'MODIFIERS', icon="BLANK1" if props.tabs == 'MODIFIERS' else "MODIFIER", text="Modifiers" if props.tabs == 'MODIFIERS' else "") 
-        layout.prop_enum(props, "tabs", 'MESHDATA', icon="BLANK1" if props.tabs == 'MESHDATA' else "MESH_DATA", text="Data" if props.tabs == 'MESHDATA' else "")  
-    if obj.type == 'CURVE':
-        layout.prop_enum(props, "tabs", 'DISPLAY', icon='RESTRICT_VIEW_OFF', text="") 
-        layout.prop_enum(props, "tabs", 'MATERIAL', icon='MATERIAL', text="") 
-        layout.prop_enum(props, "tabs", 'CONSTRAINTS', icon='CONSTRAINT', text="") 
-        layout.prop_enum(props, "tabs", 'MODIFIERS', icon='MODIFIER', text="") 
-        layout.prop_enum(props, "tabs", 'CURVEDATA', icon='CURVE_DATA', text="")  
-    if obj.type == 'FONT':
-        layout.prop_enum(props, "tabs", 'DISPLAY', icon='RESTRICT_VIEW_OFF', text="") 
-        layout.prop_enum(props, "tabs", 'MATERIAL', icon='MATERIAL', text="") 
-        layout.prop_enum(props, "tabs", 'CONSTRAINTS', icon='CONSTRAINT', text="") 
-        layout.prop_enum(props, "tabs", 'MODIFIERS', icon='MODIFIER', text="") 
-        layout.prop_enum(props, "tabs", 'TEXTDATA', icon='FONT_DATA', text="")  
-    if obj.type == 'EMPTY':
-        layout.prop_enum(props, "tabs", 'DISPLAY', icon='RESTRICT_VIEW_OFF', text="") 
-        layout.prop_enum(props, "tabs", 'CONSTRAINTS', icon='CONSTRAINT', text="") 
-        layout.prop_enum(props, "tabs", 'EMPTYDATA', icon='EMPTY_DATA', text="")  
-    if obj.type == 'LAMP':
-        layout.prop_enum(props, "tabs", 'DISPLAY', icon='RESTRICT_VIEW_OFF', text="") 
-        layout.prop_enum(props, "tabs", 'CONSTRAINTS', icon='CONSTRAINT', text="") 
-        layout.prop_enum(props, "tabs", 'LIGHTDATA', icon='LAMP_SPOT', text="")  
-    if obj.type == 'CAMERA':
-        layout.prop_enum(props, "tabs", 'CONSTRAINTS', icon='CONSTRAINT', text="") 
-        layout.prop_enum(props, "tabs", 'CAMERADATA', icon='OUTLINER_DATA_CAMERA', text="")
-    if obj.type == 'ARMATURE':
-        layout.prop_enum(props, "tabs", 'DISPLAY', icon='RESTRICT_VIEW_OFF', text="") 
-        layout.prop_enum(props, "tabs", 'CONSTRAINTS', icon='CONSTRAINT', text="")
-    layout.prop_enum(props, "tabs", 'DRIVERS', icon="BLANK1" if props.tabs == 'DRIVERS' else "AUTO", text="Drivers" if props.tabs == 'DRIVERS' else "")
-    
-def draw_object_info(layout,obj):
-#     box = layout.box()
+    layout.scale_y = 1.3
+    layout.scale_x = 1.5
+    layout.prop_enum(props, "tabs", 'INFO',icon="INFO", text="Main") 
+    if obj.type in {'MESH','CURVE','FONT'}:
+        layout.prop_enum(props, "tabs", 'MATERIAL', icon="MATERIAL", text="Materials") 
+        layout.prop_enum(props, "tabs", 'CONSTRAINTS', icon="CONSTRAINT", text="Constraints") 
+        layout.prop_enum(props, "tabs", 'MODIFIERS', icon="MODIFIER", text="Modifiers") 
+    if obj.type in {'EMPTY','LAMP','CAMERA'}:
+        layout.prop_enum(props, "tabs", 'CONSTRAINTS', icon='CONSTRAINT', text="Constraints") 
+
+def draw_object_info(layout,obj,context):
+
+    layout.label("Main Object Properties:",icon='OBJECT_DATA')
+
     row = layout.row()
     row.prop(obj,'name')
-    if obj.type in {'MESH','CURVE','LATTICE','TEXT'}:
-        pass
-#         row.operator('fd_object.toggle_edit_mode',text="",icon='EDITMODE_HLT').object_name = obj.name
-    
+
     has_hook_modifier = False
     for mod in obj.modifiers:
         if mod.type == 'HOOK':
             has_hook_modifier =  True
+            break
     
     has_shape_keys = False
     if obj.type == 'MESH':
@@ -980,10 +1121,6 @@ def draw_object_info(layout,obj):
         col.label("X: " + str(round(math.degrees(obj.rotation_euler.x),4)))
         col.label("Y: " + str(round(math.degrees(obj.rotation_euler.y),4)))
         col.label("Z: " + str(round(math.degrees(obj.rotation_euler.z),4)))
-        if has_hook_modifier:
-            layout.operator("fd_object.apply_hook_modifiers",icon='HOOK').object_name = obj.name
-        if has_shape_keys:
-            layout.operator("fd_object.apply_shape_keys",icon='SHAPEKEY_DATA').object_name = obj.name
     else:
         if obj.type not in {'EMPTY','CAMERA','LAMP'}:
             layout.label('Dimensions:')
@@ -1061,13 +1198,9 @@ def draw_object_info(layout,obj):
                 row.label("Y: " + str(round(math.degrees(obj.rotation_euler.z),4)))
             else:
                 row.prop(obj,"rotation_euler",index=2,text="Z")
-                
-#     row = box.row()
-#     row.prop(obj.mv,'comment')
-    
+
 def draw_object_materials(layout,obj,context):
 
-    
     mat = None
     ob = context.object
     slot = None
@@ -1084,7 +1217,8 @@ def draw_object_materials(layout,obj,context):
 
         row = layout.row()
 
-        row.template_list("MATERIAL_UL_matslots", "", ob, "material_slots", ob, "active_material_index", rows=rows)
+        row.template_list("MATERIAL_UL_matslots", "", ob, 
+                          "material_slots", ob, "active_material_index", rows=rows)
 
         col = row.column(align=True)
         col.operator("object.material_slot_add", icon='ZOOMIN', text="")
@@ -1095,8 +1229,10 @@ def draw_object_materials(layout,obj,context):
         if is_sortable:
             col.separator()
 
-            col.operator("object.material_slot_move", icon='TRIA_UP', text="").direction = 'UP'
-            col.operator("object.material_slot_move", icon='TRIA_DOWN', text="").direction = 'DOWN'
+            col.operator("object.material_slot_move", 
+                         icon='TRIA_UP', text="").direction = 'UP'
+            col.operator("object.material_slot_move", 
+                         icon='TRIA_DOWN', text="").direction = 'DOWN'
 
         if ob.mode == 'EDIT':
             row = layout.row(align=True)
@@ -1104,85 +1240,19 @@ def draw_object_materials(layout,obj,context):
             row.operator("object.material_slot_select", text="Select")
             row.operator("object.material_slot_deselect", text="Deselect")
 
-#     split = layout.split(percentage=0.65)
-
     if ob:
         layout.template_ID(ob, "active_material", new="material.new")
         row = layout.row()
 
-        if slot:
-            row.prop(slot, "link", text="")
-        else:
-            row.label()
-    elif mat:
-        layout.template_preview(mat)
-#         split.template_ID(space, "pin_id")
-#         split.separator()
-                
     if mat:
         layout.template_preview(mat)
-    
-                
-    if obj.type in {'MESH','CURVE'}:
-        pass
-    if obj.mode == 'EDIT':
-        row = layout.row(align=True)
-        row.operator("object.material_slot_assign", text="Assign")
-        row.operator("object.material_slot_select", text="Select")
-        row.operator("object.material_slot_deselect", text="Deselect")
-        
-    layout.operator('fd_general.open_new_window',text="Open Material Editor",icon='NODETREE').space_type = 'NODE_EDITOR'
-
-def draw_object_drivers(layout,obj):
-    if obj:
-        if not obj.animation_data:
-            layout.label("There are no drivers assigned to the object",icon='ERROR')
-        else:
-            if len(obj.animation_data.drivers) == 0:
-                layout.label("There are no drivers assigned to the object",icon='ERROR')
-            for DR in obj.animation_data.drivers:
-                box = layout.box()
-                row = box.row()
-                DriverName = DR.data_path
-                if DriverName in {"location","rotation_euler","dimensions" ,"lock_scale",'lock_location','lock_rotation'}:
-                    if DR.array_index == 0:
-                        DriverName = DriverName + " X"
-                    if DR.array_index == 1:
-                        DriverName = DriverName + " Y"
-                    if DR.array_index == 2:
-                        DriverName = DriverName + " Z"                     
-                value = eval('bpy.data.objects["' + obj.name + '"].' + DR.data_path)
-                if type(value).__name__ == 'str':
-                    row.label(DriverName + " = " + str(value),icon='AUTO')
-                elif type(value).__name__ == 'float':
-                    row.label(DriverName + " = " + str(unit.meter_to_active_unit(value)),icon='AUTO')
-                elif type(value).__name__ == 'int':
-                    row.label(DriverName + " = " + str(value),icon='AUTO')
-                elif type(value).__name__ == 'bool':
-                    row.label(DriverName + " = " + str(value),icon='AUTO')
-                elif type(value).__name__ == 'bpy_prop_array':
-                    row.label(DriverName + " = " + str(value[DR.array_index]),icon='AUTO')
-                elif type(value).__name__ == 'Vector':
-                    row.label(DriverName + " = " + str(unit.meter_to_active_unit(value[DR.array_index])),icon='AUTO')
-                elif type(value).__name__ == 'Euler':
-                    row.label(DriverName + " = " + str(unit.meter_to_active_unit(value[DR.array_index])),icon='AUTO')
-                else:
-                    row.label(DriverName + " = " + str(type(value)),icon='AUTO')
- 
-#                 props = row.operator("fd_driver.add_variable_to_object",text="",icon='ZOOMIN')
-#                 props.object_name = obj.name
-#                 props.data_path = DR.data_path
-#                 props.array_index = DR.array_index
-#                 obj_bp = utils.get_assembly_bp(obj)
-#                 if obj_bp:
-#                     props = row.operator('fd_driver.get_vars_from_object',text="",icon='DRIVER')
-#                     props.object_name = obj.name
-#                     props.var_object_name = obj_bp.name
-#                     props.data_path = DR.data_path
-#                     props.array_index = DR.array_index
-                utils.draw_driver_expression(box,DR)
-#                 draw_add_variable_operators(box,obj.name,DR.data_path,DR.array_index)
-                utils.draw_driver_variables(box,DR,obj.name)
+        layout.operator('object_props.open_new_window',
+                        text="Open Material Editor",
+                        icon='NODETREE').space_type = 'NODE_EDITOR' 
+    if obj.mode == 'EDIT':    
+        layout.operator('object_props.open_new_window',
+                        text="Open Texture Editor",
+                        icon='IMAGE_COL').space_type = 'IMAGE_EDITOR'       
 
 class PANEL_object_properties(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
@@ -1209,7 +1279,7 @@ class PANEL_object_properties(bpy.types.Panel):
             draw_object_properties(layout,obj,context)
             
 class OPS_open_new_window(bpy.types.Operator):
-    bl_idname = "fd_general.open_new_window"
+    bl_idname = "object_props.open_new_window"
     bl_label = "Open New Window"
 
     space_type = bpy.props.StringProperty(name="Space Type")
@@ -1225,6 +1295,24 @@ class OPS_open_new_window(bpy.types.Operator):
                 window.screen.areas[0].type = self.space_type
         return {'FINISHED'}            
             
+class OPS_collapse_all_modifiers(bpy.types.Operator):
+    bl_idname = "object_props.collapse_all_modifiers"
+    bl_label = "Collapse All Modifiers"
+
+    def execute(self, context):
+        for mod in context.active_object.modifiers:
+            mod.show_expanded = False
+        return {'FINISHED'}                        
+            
+class OPS_collapse_all_constraints(bpy.types.Operator):
+    bl_idname = "object_props.collapse_all_constraints"
+    bl_label = "Collapse All Constraints"
+
+    def execute(self, context):
+        for mod in context.active_object.constraints:
+            mod.show_expanded = False
+        return {'FINISHED'}                          
+            
 def get_scene_props(scene):
     return scene.obj_panel
             
@@ -1234,13 +1322,13 @@ class scene_props(bpy.types.PropertyGroup):
         items=enum_object_tabs,
         description="Select the Object Type.",
         default='INFO')       
-            
-            
-            
+
 def register():
     bpy.utils.register_class(PANEL_object_properties)
     bpy.utils.register_class(scene_props)
     bpy.utils.register_class(OPS_open_new_window)
+    bpy.utils.register_class(OPS_collapse_all_modifiers)
+    bpy.utils.register_class(OPS_collapse_all_constraints)
     bpy.types.Scene.obj_panel = bpy.props.PointerProperty(type = scene_props)
     
 def unregister():

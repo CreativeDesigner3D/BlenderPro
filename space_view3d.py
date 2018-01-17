@@ -53,6 +53,10 @@ def clear_view3d_properties_shelf():
         bpy.utils.unregister_class(bpy.types.VIEW3D_PT_tools_rigid_body)   
 
 def clear_view3d_tools_shelf():
+    if hasattr(bpy.types, 'VIEW3D_PT_tools_grease_pencil_brush'):
+        bpy.utils.unregister_class(bpy.types.VIEW3D_PT_tools_grease_pencil_brush)          
+    if hasattr(bpy.types, 'VIEW3D_PT_tools_grease_pencil_draw'):
+        bpy.utils.unregister_class(bpy.types.VIEW3D_PT_tools_grease_pencil_draw)      
     if hasattr(bpy.types, 'VIEW3D_PT_tools_add_object'):
         bpy.utils.unregister_class(bpy.types.VIEW3D_PT_tools_add_object)  
     if hasattr(bpy.types, 'VIEW3D_PT_tools_transform'):
@@ -307,6 +311,7 @@ class VIEW3D_MT_objecttools(bpy.types.Menu):
         layout.separator()
         layout.operator("object.delete",icon='X').use_global = False
 
+
 class VIEW3D_MT_mesh_selection(bpy.types.Menu):
     bl_label = "Menu"
 
@@ -315,6 +320,70 @@ class VIEW3D_MT_mesh_selection(bpy.types.Menu):
         layout.operator("mesh.select_mode",text="Vertex Select",icon='VERTEXSEL').type='VERT'
         layout.operator("mesh.select_mode",text="Edge Select",icon='EDGESEL').type='EDGE'
         layout.operator("mesh.select_mode",text="Face Select",icon='FACESEL').type='FACE'
+
+
+class VIEW3D_PT_Standard_Objects(bpy.types.Panel):
+    bl_label = "Standard Objects"
+    bl_idname = "TOOLS_PT_Archipack_Create"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "TOOLS"
+    bl_category = "Draw"
+    bl_context = "objectmode"
+
+    def draw(self, context):
+        
+        box = self.layout.box()
+        col = box.column(align=True)
+        row = col.row(align=True)
+        row.label("Mesh",icon='OUTLINER_OB_MESH')
+        
+        row = col.row(align=True)
+        row.scale_y = 1.3        
+        row.operator("view3d.draw_mesh", icon='MESH_CUBE',text="Draw Cube")   
+
+        row = col.row(align=True)
+        row.scale_y = 1.3        
+        row.operator("view3d.draw_plane", icon='MESH_PLANE',text="Draw Plane")   
+        
+        box = self.layout.box()
+        col = box.column(align=True)
+        row = col.row(align=True)
+        row.label("Curves",icon='OUTLINER_OB_CURVE')
+        
+        row = col.row(align=True)
+        row.scale_y = 1.3        
+        row.operator("view3d.draw_curve", icon='CURVE_DATA',text="Select Points To Draw")  
+
+        row = col.row(align=True)
+        row.scale_y = 1.3        
+        row.operator("view3d.draw_curve", icon='CURVE_BEZCIRCLE',text="Draw Circle")  
+        
+        box = self.layout.box()
+        col = box.column(align=True)
+        row = col.row(align=True)
+        row.label("Empties",icon='OUTLINER_OB_EMPTY')
+        
+        row = col.row(align=True)
+        row.scale_y = 1.3
+        row.operator("view3d.draw_curve", icon='OUTLINER_DATA_EMPTY',text="Place Empty Object")    
+
+        box = self.layout.box()
+        col = box.column(align=True)
+        row = col.row(align=True)
+        row.label("Lamps",icon='OUTLINER_OB_LAMP')
+        
+        row = col.row(align=True)
+        row.scale_y = 1.3
+        row.operator("view3d.draw_curve", icon='LAMP_POINT',text="Draw Area Lamp")
+        
+        box = self.layout.box()
+        col = box.column(align=True)
+        row = col.row(align=True)
+        row.label("Cameras",icon='OUTLINER_OB_CAMERA')
+        
+        row = col.row(align=True)
+        row.scale_y = 1.3
+        row.operator("view3d.draw_curve", icon='CAMERA_DATA',text="Place Camera")        
 
 class OPS_viewport_options(bpy.types.Operator):
     bl_idname = "space_view3d.viewport_options"
@@ -887,9 +956,18 @@ class OPS_draw_curve(bpy.types.Operator):
         utils.delete_object_and_children(self.plane)
         self.finish(context)
         
+    def remove_last_vert_and_set_handle_type(self):
+        bpy.ops.object.editmode_toggle()
+        self.curve.data.splines[0].bezier_points[-1].select_control_point = True
+        bpy.ops.curve.dissolve_verts()
+        bpy.ops.curve.select_all(action='SELECT')
+        bpy.ops.curve.handle_type_set(type='VECTOR')
+        bpy.ops.object.editmode_toggle()
+
     def finish(self,context):
+        self.remove_last_vert_and_set_handle_type()
         context.space_data.draw_handler_remove(self._draw_handle, 'WINDOW')
-        context.window.cursor_set('DEFAULT')
+        
         if self.drawing_plane:
             utils.delete_obj_list([self.drawing_plane])
         context.area.tag_redraw()
@@ -1076,6 +1154,7 @@ class OPS_draw_curve(bpy.types.Operator):
         curve = bpy.data.curves.new("Curve",'CURVE')
         obj_curve = bpy.data.objects.new(curve.name,curve)
         bpy.context.scene.objects.link(obj_curve)  
+        context.scene.objects.active = obj_curve
         self.curve = obj_curve
 
         context.window_manager.modal_handler_add(self)
@@ -1183,6 +1262,7 @@ def register():
     bpy.utils.register_class(VIEW3D_MT_shadetools) 
     bpy.utils.register_class(VIEW3D_MT_objecttools) 
     bpy.utils.register_class(VIEW3D_MT_mesh_selection)  
+    bpy.utils.register_class(VIEW3D_PT_Standard_Objects)
     bpy.utils.register_class(OPS_viewport_options)
     bpy.utils.register_class(OPS_change_shademode)
     bpy.utils.register_class(OPS_draw_mesh)

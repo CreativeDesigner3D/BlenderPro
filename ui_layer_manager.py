@@ -569,6 +569,91 @@ class SCENE_PT_outliner(Panel):
         if len(scene.objects) == 0:
             layout.label(text="No objects in scene")
 
+    def draw_scene_image(self,layout,view,bg,i):
+        layout.active = view.show_background_images
+        box = layout.box()
+        row = box.row(align=True)
+        row.prop(bg, "show_expanded", text="", emboss=False)
+        if bg.source == 'IMAGE' and bg.image:
+            row.prop(bg.image, "name", text="", emboss=False)
+        elif bg.source == 'MOVIE_CLIP' and bg.clip:
+            row.prop(bg.clip, "name", text="", emboss=False)
+        else:
+            row.label(text="Select an Image with the open button")
+
+        if bg.show_background_image:
+            row.prop(bg, "show_background_image", text="", emboss=False, icon='RESTRICT_VIEW_OFF')
+        else:
+            row.prop(bg, "show_background_image", text="", emboss=False, icon='RESTRICT_VIEW_ON')
+
+        row.operator("view3d.background_image_remove", text="", emboss=False, icon='X').index = i
+
+        if bg.show_expanded:
+            
+            has_bg = False
+            if bg.source == 'IMAGE':
+                row = box.row()
+                row.template_ID(bg, "image", open="image.open")
+                
+                if bg.image is not None:
+                    box.prop(bg, "view_axis", text="Display View")
+                    box.prop(bg, "draw_depth", expand=False,text="Draw Depth")
+                    has_bg = True
+
+#                     if use_multiview and bg.view_axis in {'CAMERA', 'ALL'}:
+#                         box.prop(bg.image, "use_multiview")
+# 
+#                         column = box.column()
+#                         column.active = bg.image.use_multiview
+# 
+#                         column.label(text="Views Format:")
+#                         column.row().prop(bg.image, "views_format", expand=True)
+
+            elif bg.source == 'MOVIE_CLIP':
+                box.prop(bg, "use_camera_clip")
+
+                column = box.column()
+                column.active = not bg.use_camera_clip
+                column.template_ID(bg, "clip", open="clip.open")
+
+                if bg.clip:
+                    column.template_movieclip(bg, "clip", compact=True)
+
+                if bg.use_camera_clip or bg.clip:
+                    has_bg = True
+
+                column = box.column()
+                column.active = has_bg
+                column.prop(bg.clip_user, "proxy_render_size", text="")
+                column.prop(bg.clip_user, "use_render_undistorted")
+
+            if has_bg:
+                row = box.row()
+                row.label("Image Opacity")
+                row.prop(bg, "opacity", slider=True,text="")
+
+                row = box.row()
+                row.label("Rotation:")
+                row.prop(bg, "rotation",text="")
+
+                row = box.row()
+                row.label("Location:")
+                row.prop(bg, "offset_x", text="X")
+                row.prop(bg, "offset_y", text="Y")
+
+                row = box.row()
+                row.label("Flip Image:")
+                row.prop(bg, "use_flip_x",text="Horizontally")
+                row.prop(bg, "use_flip_y",text="Vertically")
+
+#                 row = box.row()
+#                 row.prop(context.scene.fd_roombuilder, "background_image_scale", text="Known Dimension")
+#                 row.operator('fd_roombuilder.select_two_points',text="Select Two Points",icon='MAN_TRANS')
+
+                row = box.row()
+                row.label("Image Size:")
+                row.prop(bg, "size",text="")        
+
     def draw_scenes(self,layout,context):
         if len(bpy.data.scenes) > 0:
             layout.template_list("FD_UL_scenes", "", bpy.data, "scenes", context.scene.outliner, "selected_scene_index", rows=4)
@@ -583,6 +668,11 @@ class SCENE_PT_outliner(Panel):
             split.label("Angle:")
             split.prop(unit, "system_rotation", text="")
 
+            layout.operator("view3d.background_image_add", text="Add Image",icon='ZOOMIN')
+            view = context.space_data
+            for i, bg in enumerate(view.background_images):
+                self.draw_scene_image(layout, view, bg, i)
+            
     def draw_worlds(self,layout,context):
         scene = context.scene
         layout.operator("world.new")
