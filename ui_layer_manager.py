@@ -688,7 +688,7 @@ class SCENE_PT_outliner(Panel):
         
     def draw_objects(self,layout,context):
         scene = context.scene
-        layout.menu("INFO_MT_fluidaddobject",text="Add Object")
+        layout.menu("VIEW3D_MT_add_object",text="Add Object")
         if len(scene.objects) > 0:
             layout.template_list("FD_UL_objects", "", scene, "objects", scene.outliner, "selected_object_index", rows=4)  
 
@@ -700,7 +700,6 @@ class SCENE_PT_outliner(Panel):
     def draw(self, context):
         scene = context.scene
         layout = self.layout
-              
         
         box = layout.box()
         col = box.column(align=True)
@@ -800,18 +799,20 @@ class SCENE_PT_namedlayer_groups(Panel):
 class FD_UL_objects(UIList):
     
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-        if not item.parent:
-            if item.type == 'MESH':
-                layout.label(item.name,icon='OUTLINER_OB_MESH')
-            if item.type == 'EMPTY':
-                layout.label(item.name,icon='OUTLINER_OB_EMPTY')
-            if item.type == 'CAMERA':
-                layout.label(item.name,icon='OUTLINER_OB_CAMERA')
-            if item.type == 'LAMP':
-                layout.label(item.name,icon='OUTLINER_OB_LAMP')                        
-            layout.prop(item,'hide',emboss=False,icon_only=True)
-            layout.prop(item,'hide_select',emboss=False,icon_only=True)
-            layout.prop(item,'hide_render',emboss=False,icon_only=True)
+        if item.type == 'MESH':
+            layout.label(item.name,icon='OUTLINER_OB_MESH')
+        if item.type == 'EMPTY':
+            layout.label(item.name,icon='OUTLINER_OB_EMPTY')
+        if item.type == 'CAMERA':
+            layout.label(item.name,icon='OUTLINER_OB_CAMERA')
+        if item.type == 'LAMP':
+            layout.label(item.name,icon='OUTLINER_OB_LAMP')          
+        if item.type == 'FONT':
+            layout.label(item.name,icon='OUTLINER_OB_FONT')               
+                          
+        layout.prop(item,'hide',emboss=False,icon_only=True)
+        layout.prop(item,'hide_select',emboss=False,icon_only=True)
+        layout.prop(item,'hide_render',emboss=False,icon_only=True)
 
 class FD_UL_worlds(UIList):
     

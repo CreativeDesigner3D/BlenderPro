@@ -339,11 +339,15 @@ class VIEW3D_PT_Standard_Objects(bpy.types.Panel):
         
         row = col.row(align=True)
         row.scale_y = 1.3        
-        row.operator("view3d.draw_mesh", icon='MESH_CUBE',text="Draw Cube")   
+        row.operator("view3d.draw_assembly", icon='SURFACE_NCYLINDER',text="Draw Assembly")   
 
         row = col.row(align=True)
         row.scale_y = 1.3        
         row.operator("view3d.draw_plane", icon='MESH_PLANE',text="Draw Plane")   
+        
+        row = col.row(align=True)
+        row.scale_y = 1.3        
+        row.operator("view3d.add_text", icon='MESH_PLANE',text="Add Text")         
         
         box = self.layout.box()
         col = box.column(align=True)
@@ -459,9 +463,9 @@ class OPS_change_shademode(bpy.types.Operator):
         context.space_data.viewport_shade = self.shade_mode
         return {'FINISHED'}
 
-class OPS_draw_mesh(bpy.types.Operator):
-    bl_idname = "view3d.draw_mesh"
-    bl_label = "Draw Mesh"
+class OPS_draw_assembly(bpy.types.Operator):
+    bl_idname = "view3d.draw_assembly"
+    bl_label = "Draw Assembly"
     bl_options = {'UNDO'}
     
     #READONLY
@@ -485,6 +489,27 @@ class OPS_draw_mesh(bpy.types.Operator):
         self.finish(context)
         
     def finish(self,context):
+        bpy.ops.object.select_all(action='DESELECT')
+
+        obj = None 
+        for child in self.cube.obj_bp.children:
+            
+            if 'ISXDIM' in child:
+                if math.fabs(child.location.x) < unit.inch(1):
+                    obj = child
+                    
+            if 'ISYDIM' in child:
+                if math.fabs(child.location.y) < unit.inch(1):
+                    obj = child
+                    
+            if 'ISZDIM' in child:
+                if math.fabs(child.location.z) < unit.inch(1):
+                    obj = child
+
+        if obj:
+            obj.select = True
+            context.scene.objects.active = obj
+            bpy.ops.transform.translate('INVOKE_DEFAULT')
         context.space_data.draw_handler_remove(self._draw_handle, 'WINDOW')
         context.window.cursor_set('DEFAULT')
         if self.drawing_plane:
@@ -538,6 +563,16 @@ class OPS_draw_mesh(bpy.types.Operator):
         # restore opengl defaults
         bgl.glDisable(bgl.GL_BLEND)
         bgl.glColor4f(0.0, 0.0, 0.0, 1.0)
+
+    def event_is_place_last_point(self,event):
+        if event.type == 'LEFTMOUSE' and event.value == 'PRESS' and self.placed_first_point == False:
+            return True
+        elif event.type == 'NUMPAD_ENTER' and event.value == 'PRESS' and self.placed_first_point == False:
+            return True
+        elif event.type == 'RET' and event.value == 'PRESS' and self.placed_first_point == False:
+            return True
+        else:
+            return False
 
     def event_is_place_first_point(self,event):
         if event.type == 'LEFTMOUSE' and event.value == 'PRESS' and self.placed_first_point == False:
@@ -1175,6 +1210,42 @@ class OPS_add_camera(bpy.types.Operator):
         camera.data.ortho_scale = 200.0
         return {'FINISHED'}
 
+class OPS_add_text(bpy.types.Operator):
+    bl_idname = "view3d.add_text"
+    bl_label = "Add Text"
+    
+    enter_text = bpy.props.StringProperty(name='Enter Text')
+    split_with = bpy.props.StringProperty(name='Split With')
+    
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        if self.split_with != "":
+            split_text = self.enter_text.split(self.split_with)
+            for text in split_text:
+                bpy.ops.object.text_add()
+                obj = context.active_object
+                obj.name = text
+                obj.data.body = text
+        else:
+            bpy.ops.object.text_add()
+            obj = context.active_object   
+            obj.name = self.enter_text         
+            obj.data.body = self.enter_text
+        return {'FINISHED'}
+        
+    def invoke(self,context,event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width=500)
+        
+    def draw(self, context):
+        layout = self.layout
+        col = layout.column()
+        col.prop(self,"enter_text")
+        col.prop(self,"split_with")
+
 class OPS_set_cursor_location(bpy.types.Operator):
     bl_idname = "view3d.set_cursor_location"
     bl_label = "Cursor Location"
@@ -1265,10 +1336,11 @@ def register():
     bpy.utils.register_class(VIEW3D_PT_Standard_Objects)
     bpy.utils.register_class(OPS_viewport_options)
     bpy.utils.register_class(OPS_change_shademode)
-    bpy.utils.register_class(OPS_draw_mesh)
+    bpy.utils.register_class(OPS_draw_assembly)
     bpy.utils.register_class(OPS_draw_plane)
     bpy.utils.register_class(OPS_draw_curve)
     bpy.utils.register_class(OPS_add_camera)
+    bpy.utils.register_class(OPS_add_text)
     bpy.utils.register_class(OPS_set_cursor_location)
     bpy.utils.register_class(OPS_snapping_options)    
     
