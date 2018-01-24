@@ -691,6 +691,9 @@ class SCENE_PT_outliner(Panel):
         layout.menu("VIEW3D_MT_add_object",text="Add Object")
         if len(scene.objects) > 0:
             layout.template_list("FD_UL_objects", "", scene, "objects", scene.outliner, "selected_object_index", rows=4)  
+            if context.object:
+                obj = context.object
+                layout.prop(obj,'name')
 
     def draw_groups(self,layout,context):
         scene = context.scene

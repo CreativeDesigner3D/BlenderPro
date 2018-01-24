@@ -1216,19 +1216,22 @@ class OPS_add_text(bpy.types.Operator):
     
     enter_text = bpy.props.StringProperty(name='Enter Text')
     split_with = bpy.props.StringProperty(name='Split With')
-    
-    @classmethod
-    def poll(cls, context):
+    split_text_with_character = bpy.props.BoolProperty(name="Split Text with Character")
+
+    def check(self, context):
         return True
 
     def execute(self, context):
         if self.split_with != "":
             split_text = self.enter_text.split(self.split_with)
+            current_y = context.scene.cursor_location[1]
             for text in split_text:
                 bpy.ops.object.text_add()
                 obj = context.active_object
                 obj.name = text
                 obj.data.body = text
+                obj.location.y = current_y
+                current_y -= obj.dimensions.y
         else:
             bpy.ops.object.text_add()
             obj = context.active_object   
@@ -1244,7 +1247,9 @@ class OPS_add_text(bpy.types.Operator):
         layout = self.layout
         col = layout.column()
         col.prop(self,"enter_text")
-        col.prop(self,"split_with")
+        col.prop(self,"split_text_with_character")
+        if self.split_text_with_character:
+            col.prop(self,"split_with",text="Enter Character")
 
 class OPS_set_cursor_location(bpy.types.Operator):
     bl_idname = "view3d.set_cursor_location"
