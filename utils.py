@@ -3,6 +3,7 @@ Utility Functions
 '''
 
 import bpy
+import math
 from bpy_extras import view3d_utils
 
 def delete_obj_list(obj_list):
@@ -40,7 +41,7 @@ def delete_object_and_children(obj_bp):
             obj_list.append(child)
     delete_obj_list(obj_list)
 
-def get_selection_point(context, event, ray_max=10000.0,objects=None,floor=None):
+def get_selection_point(context, event, ray_max=10000.0,objects=None,floor=None,exclude_objects=[]):
     """Gets the point to place an object based on selection"""
     # get the context arguments
     scene = context.scene
@@ -59,23 +60,24 @@ def get_selection_point(context, event, ray_max=10000.0,objects=None,floor=None)
         for obj in context.visible_objects:
              
             if objects:
-                if obj in objects:
+                if obj in objects and obj not in exclude_objects:
                     yield (obj, obj.matrix_world.copy())
              
             else:
-                if floor is not None and obj == floor:
-                    yield (obj, obj.matrix_world.copy())
-                     
-#                 if obj.draw_type != 'WIRE':
-                if obj.type == 'MESH':
-                    yield (obj, obj.matrix_world.copy())
-
-                if obj.dupli_type != 'NONE':
-                    obj.dupli_list_create(scene)
-                    for dob in obj.dupli_list:
-                        obj_dupli = dob.object
-                        if obj_dupli.type == 'MESH':
-                            yield (obj_dupli, dob.matrix.copy())
+                if obj not in exclude_objects:
+                    if floor is not None and obj == floor:
+                        yield (obj, obj.matrix_world.copy())
+                         
+    #                 if obj.draw_type != 'WIRE':
+                    if obj.type == 'MESH':
+                        yield (obj, obj.matrix_world.copy())
+    
+                    if obj.dupli_type != 'NONE':
+                        obj.dupli_list_create(scene)
+                        for dob in obj.dupli_list:
+                            obj_dupli = dob.object
+                            if obj_dupli.type == 'MESH':
+                                yield (obj_dupli, dob.matrix.copy())
  
             obj.dupli_list_clear()
  
@@ -115,3 +117,8 @@ def get_selection_point(context, event, ray_max=10000.0,objects=None,floor=None)
                         best_obj = obj
                         
     return best_hit, best_obj
+
+def calc_distance(point1,point2):
+    """ This gets the distance between two points (X,Y,Z)
+    """
+    return math.sqrt((point1[0]-point2[0])**2 + (point1[1]-point2[1])**2 + (point1[2]-point2[2])**2)  

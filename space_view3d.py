@@ -369,7 +369,7 @@ class VIEW3D_PT_Standard_Objects(bpy.types.Panel):
         
         row = col.row(align=True)
         row.scale_y = 1.3
-        row.operator("view3d.draw_curve", icon='OUTLINER_DATA_EMPTY',text="Place Empty Object")    
+        row.operator("view3d.place_empty", icon='OUTLINER_DATA_EMPTY',text="Place Empty Object")    
 
         box = self.layout.box()
         col = box.column(align=True)
@@ -378,7 +378,7 @@ class VIEW3D_PT_Standard_Objects(bpy.types.Panel):
         
         row = col.row(align=True)
         row.scale_y = 1.3
-        row.operator("view3d.draw_curve", icon='LAMP_POINT',text="Draw Area Lamp")
+        row.operator("view3d.place_area_lamp", icon='LAMP_POINT',text="Draw Area Lamp")
         
         box = self.layout.box()
         col = box.column(align=True)
@@ -492,7 +492,11 @@ class OPS_draw_assembly(bpy.types.Operator):
         bpy.ops.object.select_all(action='DESELECT')
 
         obj = None 
+        mesh = None
         for child in self.cube.obj_bp.children:
+            
+            if ISROOMMESH in child:
+                mesh = child
             
             if 'ISXDIM' in child:
                 if math.fabs(child.location.x) < unit.inch(1):
@@ -510,6 +514,27 @@ class OPS_draw_assembly(bpy.types.Operator):
             obj.select = True
             context.scene.objects.active = obj
             bpy.ops.transform.translate('INVOKE_DEFAULT')
+        
+        #CANNOT RUN THIS CODE WHILE IN TRANSLATE OPERATOR
+#         if mesh:
+#             list_mod = []
+#             if mesh:
+#                 for mod in obj.modifiers:
+#                     if mod.type in {'HOOK'}:
+#                         list_mod.append(mod.name)
+#     
+#             for mod in list_mod:
+#                 bpy.ops.object.modifier_apply(apply_as='DATA',modifier=mod)
+#                 
+#             bpy.ops.mesh.select_all(action='DESELECT')
+#             mesh.select = True
+#             context.scene.objects.active = mesh
+#                 
+#             bpy.ops.object.editmode_toggle()
+#             bpy.ops.mesh.select_all(action='SELECT')
+#             bpy.ops.mesh.normals_make_consistent()
+#             bpy.ops.object.editmode_toggle()
+        
         context.space_data.draw_handler_remove(self._draw_handle, 'WINDOW')
         context.window.cursor_set('DEFAULT')
         if self.drawing_plane:
@@ -655,13 +680,13 @@ class OPS_draw_assembly(bpy.types.Operator):
         selected_point, selected_obj = utils.get_selection_point(context,event)
         
         self.position_cube(context,selected_point,selected_obj)
-
+        
         if self.event_is_place_second_point(event):
             return self.finish(context)
-
+        
         if self.event_is_place_first_point(event):
             self.placed_first_point = True
-
+            
         if event.type in {'RIGHTMOUSE', 'ESC'}:
             self.cancel_drop(context)
             return {'CANCELLED'}
@@ -1251,6 +1276,166 @@ class OPS_add_text(bpy.types.Operator):
         if self.split_text_with_character:
             col.prop(self,"split_with",text="Enter Character")
 
+class OPS_place_empty(bpy.types.Operator):
+    bl_idname = "view3d.place_empty"
+    bl_label = "Place Empty"
+    bl_options = {'UNDO'}
+
+    def execute(self, context):
+        bpy.ops.object.empty_add(type='PLAIN_AXES')
+        obj = context.active_object
+        bpy.ops.transform.translate('INVOKE_DEFAULT')
+        
+        return {'FINISHED'}
+
+class OPS_place_area_lamp(bpy.types.Operator):
+    bl_idname = "view3d.place_area_lamp"
+    bl_label = "Place Area Lamp"
+    bl_options = {'UNDO'}
+    
+    #READONLY
+    _draw_handle = None
+    mouse_x = 0
+    mouse_y = 0
+    
+    drawing_plane = None
+    lamp = None
+    ray_cast_objects = []
+    placed_first_point = False
+    selected_point = (0,0,0)
+    
+    def cancel_drop(self,context):
+        utils.delete_object_and_children(self.lamp)
+        self.finish(context)
+        
+    def finish(self,context):
+        context.space_data.draw_handler_remove(self._draw_handle, 'WINDOW')
+        context.window.cursor_set('DEFAULT')
+        if self.drawing_plane:
+            utils.delete_obj_list([self.drawing_plane])
+        context.area.tag_redraw()
+        return {'FINISHED'}
+
+    @staticmethod
+    def _window_region(context):
+        window_regions = [region
+                          for region in context.area.regions
+                          if region.type == 'WINDOW']
+        return window_regions[0]
+
+    def draw_opengl(self,context):     
+        region = self._window_region(context)
+        
+        help_box = TextBox(
+            x=0,y=0,
+            width=500,height=0,
+            border=10,margin=100,
+            message="Command Help:\nLEFT CLICK: Place Wall\nRIGHT CLICK: Cancel Command")
+        help_box.x = (self.mouse_x + (help_box.width) / 2 + 10) - region.x
+        help_box.y = (self.mouse_y - 10) - region.y
+
+        help_box.draw()
+
+    def event_is_place_first_point(self,event):
+        if event.type == 'LEFTMOUSE' and event.value == 'PRESS' and self.placed_first_point == False:
+            return True
+        elif event.type == 'NUMPAD_ENTER' and event.value == 'PRESS' and self.placed_first_point == False:
+            return True
+        elif event.type == 'RET' and event.value == 'PRESS' and self.placed_first_point == False:
+            return True
+        else:
+            return False
+
+    def event_is_place_second_point(self,event):
+        if event.type == 'LEFTMOUSE' and event.value == 'PRESS' and self.placed_first_point:
+            return True
+        elif event.type == 'NUMPAD_ENTER' and event.value == 'PRESS' and self.placed_first_point:
+            return True
+        elif event.type == 'RET' and event.value == 'PRESS' and self.placed_first_point:
+            return True
+        else:
+            return False
+
+    def position_lamp(self,selected_point):
+        if not self.placed_first_point:
+            self.lamp.location = selected_point
+            self.selected_point = selected_point
+        else:
+            self.lamp.data.size = utils.calc_distance((self.selected_point[0],0,0),(selected_point[0],0,0))
+            self.lamp.data.size_y = utils.calc_distance((0,self.selected_point[1],0),(0,selected_point[1],0))
+            self.lamp.location.x = self.selected_point[0] + ((selected_point[0]/2) - (self.selected_point[0]/2))
+            self.lamp.location.y = self.selected_point[1] + ((selected_point[1]/2) - (self.selected_point[1]/2))
+            self.lamp.location.z = self.selected_point[2]
+#             self.lamp.x_dim(value = selected_point[0] - self.selected_point[0])
+#             self.lamp.y_dim(value = selected_point[1] - self.selected_point[1])
+#             self.lamp.z_dim(value = selected_point[2] - self.selected_point[2])
+            
+    def modal(self, context, event):
+        context.area.tag_redraw()
+        self.mouse_x = event.mouse_x
+        self.mouse_y = event.mouse_y
+        
+        selected_point, selected_obj = utils.get_selection_point(context,event)
+        
+        self.position_lamp(selected_point)
+        
+        if self.event_is_place_second_point(event):
+            return self.finish(context)
+
+        if self.event_is_place_first_point(event):
+            self.placed_first_point = True
+
+        if event.type in {'RIGHTMOUSE', 'ESC'}:
+            self.cancel_drop(context)
+            return {'CANCELLED'}
+        
+        if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
+            return {'PASS_THROUGH'}        
+        
+        return {'RUNNING_MODAL'}
+        
+    def create_drawing_plane(self,context):
+        bpy.ops.mesh.primitive_plane_add()
+        plane = context.active_object
+        plane.location = (0,0,0)
+        self.drawing_plane = context.active_object
+        self.drawing_plane.draw_type = 'WIRE'
+        self.drawing_plane.dimensions = (100,100,1)
+        self.ray_cast_objects.append(self.drawing_plane)
+
+    def invoke(self, context, event):
+        self.ray_cast_objects = []
+        for obj in bpy.data.objects:
+            if ISWALL in obj or ISROOMMESH in obj:
+                self.ray_cast_objects.append(obj)
+        self.mouse_x = event.mouse_x
+        self.mouse_y = event.mouse_y
+        self._draw_handle = context.space_data.draw_handler_add(
+            self.draw_opengl, (context,), 'WINDOW', 'POST_PIXEL')
+        self.placed_first_point = False
+        self.selected_point = (0,0,0)
+        
+        self.create_drawing_plane(context)
+        
+        lamp = bpy.data.lamps.new("Room Lamp",'AREA')
+        lamp.shape = 'RECTANGLE'
+        obj_lamp = bpy.data.objects.new("Room Lamp", lamp)
+        context.scene.objects.link(obj_lamp)
+        self.lamp = obj_lamp
+        
+        #CREATE CUBE
+#         self.cube = Assembly()
+#         self.cube.create_assembly()
+#         mesh_obj = self.cube.add_mesh("RoomCube")
+#         mesh_obj[ISROOMMESH] = True
+#         self.cube.x_dim(value = 0)
+#         self.cube.y_dim(value = 0)
+#         self.cube.z_dim(value = 0)
+        
+        context.window_manager.modal_handler_add(self)
+        context.area.tag_redraw()
+        return {'RUNNING_MODAL'}
+
 class OPS_set_cursor_location(bpy.types.Operator):
     bl_idname = "view3d.set_cursor_location"
     bl_label = "Cursor Location"
@@ -1346,8 +1531,10 @@ def register():
     bpy.utils.register_class(OPS_draw_curve)
     bpy.utils.register_class(OPS_add_camera)
     bpy.utils.register_class(OPS_add_text)
+    bpy.utils.register_class(OPS_place_empty)
+    bpy.utils.register_class(OPS_place_area_lamp)
     bpy.utils.register_class(OPS_set_cursor_location)
-    bpy.utils.register_class(OPS_snapping_options)    
+    bpy.utils.register_class(OPS_snapping_options)
     
 def unregister():
     pass

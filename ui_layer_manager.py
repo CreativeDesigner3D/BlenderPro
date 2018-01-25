@@ -46,8 +46,12 @@ from bpy.props import (
         CollectionProperty,
         BoolVectorProperty,
         PointerProperty,
+        FloatProperty,
         )
+import os
+import math
 from bpy.app.handlers import persistent
+from . import utils
 
 EDIT_MODES = {'EDIT_MESH', 'EDIT_CURVE', 'EDIT_SURFACE', 'EDIT_METABALL', 'EDIT_TEXT', 'EDIT_ARMATURE'}
 
@@ -118,11 +122,13 @@ def update_object_selection(self,context):
     if self.selected_object_index < len(context.scene.objects):
         bpy.ops.object.select_all(action = 'DESELECT')
         obj = context.scene.objects[self.selected_object_index]
+        context.scene.objects.active = obj
         obj.select = True
-        context.scene.active_object = obj
     
 def update_world_selection(self,context):
-    pass  
+    if self.selected_world_index <= len(bpy.data.worlds) - 1:
+        world = bpy.data.worlds[self.selected_world_index]
+        context.scene.world = world  
     
 def update_scene_selection(self,context):
     context.screen.scene = bpy.data.scenes[self.selected_scene_index] 
@@ -130,6 +136,9 @@ def update_scene_selection(self,context):
         context.screen.scene.outliner.selected_scene_index = self.selected_scene_index
     
 def update_group_selection(self,context):
+    pass
+    
+def update_group_object_selection(self,context):
     pass
     
 class LayerGroup(PropertyGroup):
@@ -154,6 +163,9 @@ class Outliner(PropertyGroup):
     selected_material_index = IntProperty(name="Selected Material Index", default=0)
     selected_scene_index = IntProperty(name="Selected Scene Index", default=0, update = update_scene_selection)
     selected_group_index = IntProperty(name="Selected Group Index", default=0, update = update_group_selection)
+    selected_group_object_index = IntProperty(name="Selected Group Object Index", default=0, update = update_group_object_selection)
+    
+    background_image_scale = FloatProperty(name="Background Image Scale",unit='LENGTH')
     
 class SCENE_OT_namedlayer_group_add(Operator):
     """Add and select a new layer group"""
@@ -456,6 +468,166 @@ class SCENE_OT_create_new_scene(Operator):
 
         return {'FINISHED'}
     
+class GROUP_OT_make_group_from_selection(Operator):
+    bl_idname = "group.make_group_from_selection"
+    bl_label = "Make Group From Selection"
+    bl_description = "This will create a group from the selected objects"
+    bl_options = {'UNDO'}
+
+    group_name = StringProperty(name="Group Name",default = "New Group")
+
+    @classmethod
+    def poll(cls, context):
+        if len(context.selected_objects) > 0:
+            return True
+        else:
+            return False
+
+    def execute(self, context):
+        for obj in context.selected_objects:
+            obj.hide = False
+            obj.hide_select = False
+            obj.select = True
+        bpy.ops.group.create(name=self.group_name)
+        return {'FINISHED'}
+
+    def invoke(self,context,event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width=400)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self,"group_name")    
+    
+class WORLD_OT_create_world_from_hdr(Operator):
+    """Creates a New World from a HDR"""
+    bl_idname = "world.create_new_world_from_hdr"
+    bl_label = "Create New World From HDR"
+
+    filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+
+    def draw(self, context):
+        self.layout.operator('file.select_all_toggle')  
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        wm.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+    def execute(self, context):
+        file_path, file_name = os.path.split(self.filepath)
+        filename , ext = os.path.splitext(file_name)        
+        
+        world = bpy.data.worlds.new(filename)
+        context.scene.world = world
+        new_image = bpy.data.images.load(self.filepath)
+        
+        world.use_nodes = True
+        texture = world.node_tree.nodes.new("ShaderNodeTexEnvironment")
+        texture.image = new_image
+        texture.location = world.node_tree.nodes[0].location
+        texture.location = (-200,300)
+        
+        mapping = world.node_tree.nodes.new("ShaderNodeMapping")
+        mapping.location = world.node_tree.nodes[0].location
+        mapping.location = (-550,300)
+
+        texcord = world.node_tree.nodes.new("ShaderNodeTexCoord")
+        texcord.location = world.node_tree.nodes[0].location
+        texcord.location = (-750,300)
+        
+        background = world.node_tree.nodes[1]
+        
+        new_links = world.node_tree.links.new
+        new_links(background.inputs[0], texture.outputs[0])        
+        new_links(texture.inputs[0], mapping.outputs[0])
+        new_links(mapping.inputs[0], texcord.outputs[0])
+        
+        return {'FINISHED'}
+    
+class SCENE_OT_set_background_image_scale(Operator):
+    bl_idname = "scene.set_background_image_scale"
+    bl_label = "Set Background Image Scale"
+    bl_options = {'UNDO'}
+    
+    image_name = bpy.props.StringProperty(name="Image Name")
+    
+    #READONLY
+    drawing_plane = None
+
+    first_point = (0,0,0)
+    second_point = (0,0,0)
+    
+    header_text = "Select the First Point"
+    
+    def cancel_drop(self,context,event):
+        context.window.cursor_set('DEFAULT')
+        utils.delete_obj_list([self.drawing_plane])
+        return {'FINISHED'}
+        
+    def __del__(self):
+        bpy.context.area.header_text_set()
+        
+    def event_is_cancel(self,event):
+        if event.type == 'RIGHTMOUSE' and event.value == 'PRESS':
+            return True
+        elif event.type == 'ESC' and event.value == 'PRESS':
+            return True
+        else:
+            return False
+            
+    def calc_distance(self,point1,point2):
+        """ This gets the distance between two points (X,Y,Z)
+        """
+        return math.sqrt((point1[0]-point2[0])**2 + (point1[1]-point2[1])**2 + (point1[2]-point2[2])**2)             
+
+    def modal(self, context, event):
+        
+        context.window.cursor_set('PAINT_BRUSH')
+        context.area.tag_redraw()
+        selected_point, selected_obj = utils.get_selection_point(context,event,objects=[self.drawing_plane]) #Pass in Drawing Plane
+        bpy.ops.object.select_all(action='DESELECT')
+        if selected_obj:
+            if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
+                if self.first_point != (0,0,0):
+                    self.second_point = selected_point
+                    
+                    distance = self.calc_distance(self.first_point,self.second_point)
+                    
+                    diff = context.scene.outliner.background_image_scale / distance
+
+                    view = context.space_data
+                    for bg in view.background_images:
+                        if bg.image.name == self.image_name:
+                            bg_size = bg.size
+                            bg.size = bg_size*diff
+                    return self.cancel_drop(context,event)
+                else:
+                    self.first_point = selected_point
+
+        if event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
+            return {'PASS_THROUGH'}
+            
+        if self.event_is_cancel(event):
+            return self.cancel_drop(context,event)
+            
+        return {'RUNNING_MODAL'}
+        
+    def execute(self,context):
+        view3d = context.space_data.region_3d
+        self.first_point = (0,0,0)
+        self.second_point = (0,0,0)
+        bpy.ops.mesh.primitive_plane_add()
+        plane = context.active_object
+        plane.location = (0,0,0)
+        self.drawing_plane = context.active_object
+        self.drawing_plane.draw_type = 'WIRE'
+        self.drawing_plane.dimensions = (100,100,1)
+        self.drawing_plane.rotation_mode = 'QUATERNION'
+        self.drawing_plane.rotation_quaternion = view3d.view_rotation
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+    
 
 class SCENE_PT_outliner(Panel):
     bl_space_type = 'VIEW_3D'
@@ -646,25 +818,26 @@ class SCENE_PT_outliner(Panel):
                 row.prop(bg, "use_flip_x",text="Horizontally")
                 row.prop(bg, "use_flip_y",text="Vertically")
 
-#                 row = box.row()
-#                 row.prop(context.scene.fd_roombuilder, "background_image_scale", text="Known Dimension")
-#                 row.operator('fd_roombuilder.select_two_points',text="Select Two Points",icon='MAN_TRANS')
+                row = box.row()
+                row.prop(bpy.context.scene.outliner, "background_image_scale", text="Known Dimension")
+                row.operator("scene.set_background_image_scale",text="Select Two Points",icon='MAN_TRANS').image_name = bg.image.name
 
                 row = box.row()
                 row.label("Image Size:")
                 row.prop(bg, "size",text="")        
 
     def draw_scenes(self,layout,context):
+        layout.operator("scene.create_new_scene",icon='ZOOMIN')
+        
         if len(bpy.data.scenes) > 0:
             layout.template_list("FD_UL_scenes", "", bpy.data, "scenes", context.scene.outliner, "selected_scene_index", rows=4)
             unit = context.scene.unit_settings
-            
-            layout.operator("scene.create_new_scene",icon='ZOOMIN')
-            
-            split = layout.split(percentage=0.35)
+            box = layout.box()
+            box.label("Scene Properties: " + context.scene.name)
+            split = box.split(percentage=0.35)
             split.label("Unit Type:")
             split.prop(unit, "system", text="")
-            split = layout.split(percentage=0.35)
+            split = box.split(percentage=0.35)
             split.label("Angle:")
             split.prop(unit, "system_rotation", text="")
 
@@ -675,31 +848,66 @@ class SCENE_PT_outliner(Panel):
             
     def draw_worlds(self,layout,context):
         scene = context.scene
-        layout.operator("world.new")
+        world = scene.world
+        view = context.space_data
+        layout.operator("world.new",icon='ZOOMIN')
+        layout.operator("world.create_new_world_from_hdr",icon='FILE_IMAGE')
+
         if len(bpy.data.worlds) > 0:
             layout.template_list("FD_UL_worlds", "", bpy.data, "worlds", scene.outliner, "selected_world_index", rows=4)
-            layout.template_preview(context.scene.world)
+        
+        box = layout.box()
+        box.label("Active World Properties: " + world.name,icon='WORLD')
+        box.prop(world,'name')
+        box.prop(view, "show_world",text="Show World in Viewport")
+        for node in world.node_tree.nodes:
+            if node.bl_idname == 'ShaderNodeBackground':
+                box.prop(node.inputs[1],'default_value',text="Strength")
+            if node.bl_idname == 'ShaderNodeMapping':
+                box.prop(node,'rotation')
+        box.operator('object_props.open_new_window',text="Show Node Editor",icon='NODETREE').space_type = 'NODE_EDITOR' 
         
     def draw_materials(self,layout,context):
         scene = context.scene
         layout.operator("material.new")
+        row = layout.row()
+        row.scale_y = 1.3
+        row.operator("library.add_material_from_library",text="Material Library",icon='EXTERNAL_DATA')        
+        
         if len(bpy.data.materials) > 0:
             layout.template_list("FD_UL_materials", "", bpy.data, "materials", scene.outliner, "selected_material_index", rows=4)
         
     def draw_objects(self,layout,context):
         scene = context.scene
-        layout.menu("VIEW3D_MT_add_object",text="Add Object")
+        layout.menu("VIEW3D_MT_add_object",text="Add Object",icon='OBJECT_DATA')
+        row = layout.row()
+        row.scale_y = 1.3
+        row.operator("library.add_object_from_library",text="Object Library",icon='EXTERNAL_DATA')
+        
         if len(scene.objects) > 0:
-            layout.template_list("FD_UL_objects", "", scene, "objects", scene.outliner, "selected_object_index", rows=4)  
-            if context.object:
-                obj = context.object
-                layout.prop(obj,'name')
+            layout.template_list("FD_UL_objects", "", scene, "objects", scene.outliner, "selected_object_index", rows=4)
+            if scene.outliner.selected_object_index <= len(scene.objects) -1:
+                box = layout.box()
+                obj = scene.objects[scene.outliner.selected_object_index]
+                box.label("Object Properties: " + obj.name)
+                box.prop(obj,'name')
 
     def draw_groups(self,layout,context):
         scene = context.scene
-        if len(scene.objects) > 0:
-            layout.template_list("FD_UL_groups", "", bpy.data, "groups", scene.outliner, "selected_group_index", rows=4)     
-            
+        layout.operator('group.make_group_from_selection',icon='ZOOMIN')
+        row = layout.row()
+        row.scale_y = 1.3        
+        row.operator("library.add_group_from_library",text="Group Library",icon='EXTERNAL_DATA')
+        if len(bpy.data.groups) > 0:
+            layout.template_list("FD_UL_groups", "", bpy.data, "groups", scene.outliner, "selected_group_index", rows=4)   
+            if scene.outliner.selected_group_index <= len(bpy.data.groups) -1:
+                box = layout.box()
+                group = bpy.data.groups[scene.outliner.selected_group_index]
+                
+                box.label("Group Properties: " + group.name)
+                box.prop(group,'name')
+                box.template_list("FD_UL_objects", "", group, "objects", scene.outliner, "selected_group_object_index", rows=4)  
+
     def draw(self, context):
         scene = context.scene
         layout = self.layout
@@ -811,8 +1019,12 @@ class FD_UL_objects(UIList):
         if item.type == 'LAMP':
             layout.label(item.name,icon='OUTLINER_OB_LAMP')          
         if item.type == 'FONT':
-            layout.label(item.name,icon='OUTLINER_OB_FONT')               
-                          
+            layout.label(item.name,icon='OUTLINER_OB_FONT')    
+        if item.type == 'CURVE':
+            layout.label(item.name,icon='OUTLINER_OB_CURVE')                          
+        if context.scene.objects.active:
+            if context.scene.objects.active.name == item.name:
+                layout.label('',icon='FILE_TICK')
         layout.prop(item,'hide',emboss=False,icon_only=True)
         layout.prop(item,'hide_select',emboss=False,icon_only=True)
         layout.prop(item,'hide_render',emboss=False,icon_only=True)
@@ -821,6 +1033,8 @@ class FD_UL_worlds(UIList):
     
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         layout.label(item.name,icon='WORLD_DATA')
+        if item.name == context.scene.world.name:
+            layout.label('',icon='FILE_TICK')
 
 class FD_UL_materials(UIList):
     
@@ -904,6 +1118,9 @@ def register():
     bpy.utils.register_class(SCENE_OT_namedlayer_lock_all)
     bpy.utils.register_class(SCENE_OT_namedlayer_select_objects_by_layer)
     bpy.utils.register_class(SCENE_OT_namedlayer_show_all)
+    bpy.utils.register_class(GROUP_OT_make_group_from_selection)
+    bpy.utils.register_class(WORLD_OT_create_world_from_hdr)
+    bpy.utils.register_class(SCENE_OT_set_background_image_scale)
     bpy.utils.register_class(SCENE_PT_outliner)
 #     bpy.utils.register_class(SCENE_UL_namedlayer_groups)
 #     bpy.utils.register_class(SCENE_PT_namedlayer_groups)
@@ -938,6 +1155,7 @@ def unregister():
     bpy.utils.unregister_class(SCENE_OT_namedlayer_lock_all)
     bpy.utils.unregister_class(SCENE_OT_namedlayer_select_objects_by_layer)
     bpy.utils.unregister_class(SCENE_OT_namedlayer_show_all)
+    bpy.utils.unregister_class(GROUP_OT_make_group_from_selection)
     bpy.utils.unregister_class(SCENE_PT_outliner)
     bpy.utils.unregister_class(SCENE_UL_namedlayer_groups)
     bpy.utils.unregister_class(SCENE_PT_namedlayer_groups)
