@@ -1,6 +1,6 @@
 import bpy
 import os
-from .. import utils
+from ..bp_lib import utils
 from . import library_utils
 
 MATERIAL_FOLDER = os.path.join(library_utils.LIBRARY_FOLDER,"materials")

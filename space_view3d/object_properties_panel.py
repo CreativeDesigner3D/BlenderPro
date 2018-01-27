@@ -1,7 +1,7 @@
 import bpy
 import math
 from bpy.app.translations import pgettext_iface as iface_ #for decimate modifier
-from . import unit, utils
+from ..bp_lib import unit, utils
 
 enum_object_tabs = [('INFO'," ","Show the Main Information"),
                     ('MATERIAL',"","Show the materials assign to the object"),
@@ -847,7 +847,8 @@ def draw_constraint(con,layout,obj):
 
 def draw_mesh_properties(layout,obj,context):
     layout.label('Mesh Properties:',icon='OUTLINER_OB_MESH')
-
+    layout.prop(obj,'draw_type',text="Draw Type")
+    
 def draw_empty_properties(layout,obj,context):
     layout.label('Empty Properties:',icon='OUTLINER_OB_EMPTY')
     layout.prop(obj,'empty_draw_type',text='Draw Type')
@@ -859,14 +860,19 @@ def draw_text_properties(layout,obj,context):
     box = layout.box()
     row = box.row()
     row.label("Font Data:")
+    row.operator('view3d.update_selected_text_with_active_font',text='',icon='FILE_REFRESH')
     row = box.row()
     row.template_ID(text, "font", open="font.open", unlink="font.unlink")
     row = box.row()
     row.label("Text Size:")
     row.prop(text,"size",text="")
     row = box.row()
-    row.prop(text,"align")
-    
+    row.label("Horizontal Alignment")
+    row.prop(text,"align_x",text="")
+    row = box.row()
+    row.label("Vertical Alignment")
+    row.prop(text,"align_y",text="")
+        
     box = layout.box()
     row = box.row()
     row.label("3D Font:")
@@ -887,17 +893,23 @@ def draw_curve_properties(layout,obj,context):
     row.label("Curve Resolution:")
     row.prop(curve,"resolution_u",text="Preview")   
     row.prop(curve,"render_resolution_u",text="Render")      
-    row = layout.row(align=True)
-    row.label("Extrude Amount:")
-    row.prop(curve,"extrude")
-    row.prop(curve,"bevel_depth")
-    row = layout.row(align=True)
-    row.prop(curve.splines[0],"use_cyclic_u",text="Close Curve")    
     
-    if curve.bevel_depth > 0 or curve.extrude > 0:
+    row = layout.row(align=True)
+    row.prop(curve.splines[0],"use_cyclic_u",text="Close Curve")       
+    
+    if curve.bevel_object is None:
+        row = layout.row(align=True)
+        row.label("Extrude Amount:")
+        row.prop(curve,"extrude")
+        row = layout.row(align=True)
+        row.label("Bevel Depth:")        
+        row.prop(curve,"bevel_depth")
+
+    if curve.bevel_depth > 0:
+        layout.prop(curve,"bevel_resolution")  
+            
+    if curve.bevel_depth > 0 or curve.extrude > 0 or curve.bevel_object is not None:
         layout.prop(curve,"offset")  
-        if curve.bevel_depth > 0:
-            layout.prop(curve,"bevel_resolution")  
         row = layout.row(align=True)
         row.label("Change Start/End:")   
         row.prop(curve,"bevel_factor_start",text="Start")  

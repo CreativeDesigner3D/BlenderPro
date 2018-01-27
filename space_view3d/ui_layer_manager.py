@@ -51,7 +51,7 @@ from bpy.props import (
 import os
 import math
 from bpy.app.handlers import persistent
-from . import utils
+from ..bp_lib import utils
 
 EDIT_MODES = {'EDIT_MESH', 'EDIT_CURVE', 'EDIT_SURFACE', 'EDIT_METABALL', 'EDIT_TEXT', 'EDIT_ARMATURE'}
 
@@ -136,17 +136,20 @@ def update_scene_selection(self,context):
         context.screen.scene.outliner.selected_scene_index = self.selected_scene_index
     
 def update_group_selection(self,context):
-    pass
-    
+    if self.selected_group_index + 1 >= len(bpy.data.groups):
+        group = bpy.data.groups[self.selected_group_index]
+        bpy.ops.object.select_all(action = 'DESELECT')
+        for obj in group.objects:
+            obj.select = True
+            
 def update_group_object_selection(self,context):
-    pass
-    
-class LayerGroup(PropertyGroup):
-    use_toggle = BoolProperty(name="", default=False)
-    use_wire = BoolProperty(name="", default=False)
-    use_lock = BoolProperty(name="", default=False)
-
-    layers = BoolVectorProperty(name="Layers", default=([False] * NUM_LAYERS), size=NUM_LAYERS, subtype='LAYER')
+    if self.selected_group_index + 1 >= len(bpy.data.groups):
+        group = bpy.data.groups[self.selected_group_index]
+        if self.selected_group_object_index < len(group.objects):
+            bpy.ops.object.select_all(action = 'DESELECT')
+            obj = group.objects[self.selected_group_object_index]
+            context.scene.objects.active = obj
+            obj.select = True
 
 class Outliner(PropertyGroup):
     outliner_tabs = bpy.props.EnumProperty(name="Outliner Tabs",
@@ -166,53 +169,6 @@ class Outliner(PropertyGroup):
     selected_group_object_index = IntProperty(name="Selected Group Object Index", default=0, update = update_group_object_selection)
     
     background_image_scale = FloatProperty(name="Background Image Scale",unit='LENGTH')
-    
-class SCENE_OT_namedlayer_group_add(Operator):
-    """Add and select a new layer group"""
-    bl_idname = "scene.namedlayer_group_add"
-    bl_label = "Add Layer Group"
-
-    layers = BoolVectorProperty(name="Layers", default=([False] * NUM_LAYERS), size=NUM_LAYERS)
-
-    @classmethod
-    def poll(cls, context):
-        return bool(context.scene)
-
-    def execute(self, context):
-        scene = context.scene
-        layergroups = scene.layergroups
-        layers = self.layers
-
-        group_idx = len(layergroups)
-        layer_group = layergroups.add()
-        layer_group.name = "LayerGroup.%.3d" % group_idx
-        layer_group.layers = layers
-        scene.layergroups_index = group_idx
-
-        return {'FINISHED'}
-
-
-class SCENE_OT_namedlayer_group_remove(Operator):
-    """Remove selected layer group"""
-    bl_idname = "scene.namedlayer_group_remove"
-    bl_label = "Remove Layer Group"
-
-    group_idx = bpy.props.IntProperty()
-
-    @classmethod
-    def poll(cls, context):
-        return bool(context.scene)
-
-    def execute(self, context):
-        scene = context.scene
-        group_idx = self.group_idx
-
-        scene.layergroups.remove(group_idx)
-        if scene.layergroups_index > len(scene.layergroups) - 1:
-            scene.layergroups_index = len(scene.layergroups) - 1
-
-        return {'FINISHED'}
-
 
 class SCENE_OT_namedlayer_toggle_visibility(Operator):
     """Show or hide given layer (shift to extend)"""
@@ -941,72 +897,6 @@ class SCENE_PT_outliner(Panel):
         if scene.outliner.outliner_tabs == 'LAYERS':
             self.draw_layers_interface(box, context)
 
-class SCENE_UL_namedlayer_groups(UIList):
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-        layer_group = item
-
-        # check for lock camera and layer is active
-        view_3d = context.area.spaces.active  # Ensured it is a 'VIEW_3D' in panel's poll(), weak... :/
-        use_spacecheck = False if view_3d.lock_camera_and_layers else True
-
-        if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            layout.prop(layer_group, "name", text="", emboss=False)
-            # lock operator
-            use_lock = layer_group.use_lock
-            icon = 'LOCKED' if use_lock else 'UNLOCKED'
-            op = layout.operator("scene.namedlayer_lock_all", text="", emboss=False, icon=icon)
-            op.use_lock = use_lock
-            op.group_idx = index
-            op.layer_idx = -1
-
-            # view operator
-            icon = 'RESTRICT_VIEW_OFF' if layer_group.use_toggle else 'RESTRICT_VIEW_ON'
-            op = layout.operator("scene.namedlayer_toggle_visibility", text="", emboss=False, icon=icon)
-            op.use_spacecheck = use_spacecheck
-            op.group_idx = index
-            op.layer_idx = -1
-
-            # wire operator
-            use_wire = layer_group.use_wire
-            icon = 'WIRE' if use_wire else 'POTATO'
-            op = layout.operator("scene.namedlayer_toggle_wire", text="", emboss=False, icon=icon)
-            op.use_wire = not use_wire
-            op.group_idx = index
-            op.layer_idx = -1
-
-        elif self.layout_type in {'GRID'}:
-            layout.alignment = 'CENTER'
-
-
-class SCENE_PT_namedlayer_groups(Panel):
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'TOOLS'
-    bl_context = "objectmode"
-    bl_category = "Layers"
-    bl_label = "Layer Groups"
-    bl_options = {'DEFAULT_CLOSED'}
-
-    @classmethod
-    def poll(self, context):
-        return ((getattr(context, "mode", 'EDIT_MESH') not in EDIT_MODES) and
-                (context.area.spaces.active.type == 'VIEW_3D'))
-
-    def draw(self, context):
-        scene = context.scene
-        group_idx = scene.layergroups_index
-
-        layout = self.layout
-        row = layout.row()
-        row.template_list("SCENE_UL_namedlayer_groups", "", scene, "layergroups", scene, "layergroups_index")
-
-        col = row.column(align=True)
-        col.operator("scene.namedlayer_group_add", icon='ZOOMIN', text="").layers = scene.layers
-        col.operator("scene.namedlayer_group_remove", icon='ZOOMOUT', text="").group_idx = group_idx
-
-        if bool(scene.layergroups):
-            layout.prop(scene.layergroups[group_idx], "layers", text="", toggle=True)
-            layout.prop(scene.layergroups[group_idx], "name", text="Name:")
-
 class FD_UL_objects(UIList):
     
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
@@ -1056,62 +946,29 @@ class FD_UL_groups(UIList):
 # Define Panel classes for updating
 panels = (
         SCENE_PT_outliner,
-        SCENE_PT_namedlayer_groups,
         )
-
 
 def update_panel(self, context):
     message = "Layer Management: Updating Panel locations has failed"
     try:
         for panel in panels:
-            print(panel)
             if "bl_rna" in panel.__dict__:
-                print('PASS',panel)
                 bpy.utils.unregister_class(panel)
-                print('UNREGISTER',panel)
                 
         for panel in panels:
-            print(panel)
             panel.bl_category = context.user_preferences.addons[__name__].preferences.category
-            print('CAT',panel.bl_category)
             bpy.utils.register_class(panel)
-            print('REGISTER',panel.bl_category)
 
     except Exception as e:
         print("\n[{}]\n{}\n\nError:\n{}".format(__name__, message, e))
         pass
 
-
-class LayerMAddonPreferences(AddonPreferences):
-    # this must match the addon name, use '__package__'
-    # when defining this in a submodule of a python package.
-    bl_idname = __package__
-
-    category = StringProperty(
-            name="Tab Category",
-            description="Choose a name for the category of the panel",
-            default="Layers",
-            update=update_panel
-            )
-
-    def draw(self, context):
-        layout = self.layout
-
-        row = layout.row()
-        col = row.column()
-        col.label(text="Tab Category:")
-        col.prop(self, "category", text="")
-
-
 def register():
     bpy.utils.register_class(NamedLayer)
     bpy.utils.register_class(NamedLayers)
-    bpy.utils.register_class(LayerGroup)
     bpy.utils.register_class(Outliner)
     
     bpy.utils.register_class(SCENE_OT_create_new_scene)
-    bpy.utils.register_class(SCENE_OT_namedlayer_group_add)
-    bpy.utils.register_class(SCENE_OT_namedlayer_group_remove)
     bpy.utils.register_class(SCENE_OT_namedlayer_toggle_visibility)
     bpy.utils.register_class(SCENE_OT_namedlayer_move_to_layer)
     bpy.utils.register_class(SCENE_OT_namedlayer_toggle_wire)
@@ -1122,33 +979,21 @@ def register():
     bpy.utils.register_class(WORLD_OT_create_world_from_hdr)
     bpy.utils.register_class(SCENE_OT_set_background_image_scale)
     bpy.utils.register_class(SCENE_PT_outliner)
-#     bpy.utils.register_class(SCENE_UL_namedlayer_groups)
-#     bpy.utils.register_class(SCENE_PT_namedlayer_groups)
-    bpy.utils.register_class(LayerMAddonPreferences)
     bpy.utils.register_class(FD_UL_objects)
     bpy.utils.register_class(FD_UL_worlds)
     bpy.utils.register_class(FD_UL_materials)
     bpy.utils.register_class(FD_UL_scenes)
     bpy.utils.register_class(FD_UL_groups)
-    
-    
-#     bpy.utils.register_module(__name__)
-#     bpy.types.Scene.layergroups = CollectionProperty(type=LayerGroup)
-    # Unused, but this is needed for the TemplateList to work...
-#     bpy.types.Scene.layergroups_index = IntProperty(default=-1)
+
     bpy.types.Scene.namedlayers = PointerProperty(type=NamedLayers)
     bpy.types.Scene.outliner = PointerProperty(type=Outliner)
     bpy.app.handlers.scene_update_post.append(check_init_data)
-#     update_panel(None, bpy.context)
 
 
 def unregister():
     bpy.utils.unregister_class(NamedLayer)
     bpy.utils.unregister_class(NamedLayers)
-    bpy.utils.unregister_class(LayerGroup)
     bpy.utils.unregister_class(Outliner)
-    bpy.utils.unregister_class(SCENE_OT_namedlayer_group_add)
-    bpy.utils.unregister_class(SCENE_OT_namedlayer_group_remove)
     bpy.utils.unregister_class(SCENE_OT_namedlayer_toggle_visibility)
     bpy.utils.unregister_class(SCENE_OT_namedlayer_move_to_layer)
     bpy.utils.unregister_class(SCENE_OT_namedlayer_toggle_wire)
@@ -1157,9 +1002,6 @@ def unregister():
     bpy.utils.unregister_class(SCENE_OT_namedlayer_show_all)
     bpy.utils.unregister_class(GROUP_OT_make_group_from_selection)
     bpy.utils.unregister_class(SCENE_PT_outliner)
-    bpy.utils.unregister_class(SCENE_UL_namedlayer_groups)
-    bpy.utils.unregister_class(SCENE_PT_namedlayer_groups)
-    bpy.utils.unregister_class(LayerMAddonPreferences)
     bpy.utils.unregister_class(FD_UL_objects)
     bpy.utils.unregister_class(FD_UL_worlds)
     bpy.utils.unregister_class(FD_UL_materials)
@@ -1171,8 +1013,6 @@ def unregister():
     del bpy.types.Scene.layergroups_index
     del bpy.types.Scene.namedlayers
     del bpy.types.Scene.outliner
-#     bpy.utils.unregister_module(__name__)
-
 
 if __name__ == "__main__":
     register()
