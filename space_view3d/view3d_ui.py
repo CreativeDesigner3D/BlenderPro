@@ -293,7 +293,7 @@ class VIEW3D_MT_mesh_selection(bpy.types.Menu):
 
 class VIEW3D_PT_Standard_Objects(bpy.types.Panel):
     bl_label = "Standard Objects"
-    bl_idname = "TOOLS_PT_Archipack_Create"
+    bl_idname = "VIEW3D_PT_Standard_Objects"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
     bl_category = "Draw"
