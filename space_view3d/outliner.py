@@ -583,7 +583,156 @@ class SCENE_OT_set_background_image_scale(Operator):
         self.drawing_plane.rotation_quaternion = view3d.view_rotation
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
+
+class SCENE_OT_delete_scene(Operator):
+    bl_idname = "scene.delete_scene"
+    bl_label = "Delete Scene"
+    bl_description = "This will delete the scene"
+    bl_options = {'UNDO'}
     
+    scene_name = StringProperty(name="Scene Name")
+    
+    @classmethod
+    def poll(cls, context):
+        if len(bpy.data.scenes) > 1:
+            return True
+        else:
+            return False
+
+    def execute(self, context):
+        if self.scene_name in bpy.data.scenes:
+            scene = bpy.data.scenes[self.scene_name]
+            bpy.data.scenes.remove(scene,do_unlink=True)
+        return {'FINISHED'}
+
+    def invoke(self,context,event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width=400)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label("Are you sure you want to delete the scene?")  
+        layout.label("Scene Name: " + self.scene_name)  
+
+class OBJECT_OT_delete_object(Operator):
+    bl_idname = "object.delete_object"
+    bl_label = "Delete Object"
+    bl_description = "This will delete the object"
+    bl_options = {'UNDO'}
+
+    object_name = StringProperty(name="Object Name")
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        if self.object_name in bpy.data.objects:
+            obj = bpy.data.objects[self.object_name]
+            bpy.context.scene.objects.unlink(obj)
+            bpy.data.objects.remove(obj,do_unlink=True)
+            context.scene.update()
+        return {'FINISHED'}
+
+    def invoke(self,context,event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width=400)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label("Are you sure you want to delete the object?")  
+        layout.label("Object Name: " + self.object_name)
+
+class MATERIAL_OT_delete_material(Operator):
+    bl_idname = "material.delete_material"
+    bl_label = "Delete Material"
+    bl_description = "This will delete the material"
+    bl_options = {'UNDO'}
+
+    material_name = StringProperty(name="Material Name")
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        if self.material_name in bpy.data.materials:
+            mat = bpy.data.materials[self.material_name]
+            bpy.data.materials.remove(mat,do_unlink=True)
+        return {'FINISHED'}
+
+    def invoke(self,context,event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width=400)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label("Are you sure you want to delete the material?")  
+        layout.label("Material Name: " + self.material_name)
+
+class WORLD_OT_delete_world(Operator):
+    bl_idname = "world.delete_world"
+    bl_label = "Delete World"
+    bl_description = "This will delete the world"
+    bl_options = {'UNDO'}
+
+    world_name = StringProperty(name="World Name")
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        if self.world_name in bpy.data.worlds:
+            wrl = bpy.data.worlds[self.world_name]
+            bpy.data.worlds.remove(wrl,do_unlink=True)
+        return {'FINISHED'}
+
+    def invoke(self,context,event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width=400)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label("Are you sure you want to delete the world?")
+        layout.label("World Name: " + self.world_name)
+
+class GROUP_OT_delete_group(Operator):
+    bl_idname = "group.delete_group"
+    bl_label = "Delete Group"
+    bl_description = "This will delete the group"
+    bl_options = {'UNDO'}
+
+    group_name = StringProperty(name="World Name")
+
+    delete_objects = BoolProperty(name="Delete Objects",default=False,description="Turn this on to delete the objects assigned to the groups as well")
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        if self.group_name in bpy.data.groups:
+            grp = bpy.data.groups[self.group_name]
+            grp_objs = grp.objects
+
+        if self.delete_objects:
+            for obj in grp_objs:
+                bpy.context.scene.objects.unlink(obj)
+                bpy.data.objects.remove(obj,do_unlink=True) 
+                
+        bpy.data.groups.remove(grp,do_unlink=True)           
+        return {'FINISHED'}
+
+    def invoke(self,context,event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width=400)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label("Are you sure you want to delete the group?")
+        layout.label("Group Name: " + self.group_name)
+        layout.prop(self,'delete_objects')
 
 class SCENE_PT_outliner(Panel):
     bl_space_type = 'VIEW_3D'
@@ -825,20 +974,25 @@ class SCENE_PT_outliner(Panel):
         
     def draw_materials(self,layout,context):
         scene = context.scene
-        layout.operator("material.new")
-        row = layout.row()
+        layout.operator("material.new",icon='ZOOMIN')
+        row = layout.row(align=True)
         row.scale_y = 1.3
         row.operator("library.add_material_from_library",text="Material Library",icon='EXTERNAL_DATA')        
+        row.menu('LIBRARY_MT_material_library',text="",icon="DOWNARROW_HLT")
         
         if len(bpy.data.materials) > 0:
             layout.template_list("FD_UL_materials", "", bpy.data, "materials", scene.outliner, "selected_material_index", rows=4)
-        
+            mat = bpy.data.materials[scene.outliner.selected_material_index]
+            layout.prop(mat,'name')
+        layout.operator('library.assign_material',text="Assign Selected Material",icon='MAN_TRANS')
+
     def draw_objects(self,layout,context):
         scene = context.scene
         layout.menu("VIEW3D_MT_add_object",text="Add Object",icon='OBJECT_DATA')
-        row = layout.row()
+        row = layout.row(align=True)
         row.scale_y = 1.3
         row.operator("library.add_object_from_library",text="Object Library",icon='EXTERNAL_DATA')
+        row.menu('LIBRARY_MT_object_library',text="",icon="DOWNARROW_HLT")
         
         if len(scene.objects) > 0:
             layout.template_list("FD_UL_objects", "", scene, "objects", scene.outliner, "selected_object_index", rows=4)
@@ -851,9 +1005,11 @@ class SCENE_PT_outliner(Panel):
     def draw_groups(self,layout,context):
         scene = context.scene
         layout.operator('group.make_group_from_selection',icon='ZOOMIN')
-        row = layout.row()
+        row = layout.row(align=True)
         row.scale_y = 1.3        
         row.operator("library.add_group_from_library",text="Group Library",icon='EXTERNAL_DATA')
+        row.menu('LIBRARY_MT_group_library',text="",icon="DOWNARROW_HLT")
+        
         if len(bpy.data.groups) > 0:
             layout.template_list("FD_UL_groups", "", bpy.data, "groups", scene.outliner, "selected_group_index", rows=4)   
             if scene.outliner.selected_group_index <= len(bpy.data.groups) -1:
@@ -918,6 +1074,7 @@ class FD_UL_objects(UIList):
         layout.prop(item,'hide',emboss=False,icon_only=True)
         layout.prop(item,'hide_select',emboss=False,icon_only=True)
         layout.prop(item,'hide_render',emboss=False,icon_only=True)
+        layout.operator('object.delete_object',emboss=False,icon='X',text="").object_name = item.name
 
 class FD_UL_worlds(UIList):
     
@@ -925,21 +1082,25 @@ class FD_UL_worlds(UIList):
         layout.label(item.name,icon='WORLD_DATA')
         if item.name == context.scene.world.name:
             layout.label('',icon='FILE_TICK')
+        layout.operator('world.delete_world',icon='X',text="",emboss=False).world_name = item.name
 
 class FD_UL_materials(UIList):
     
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         layout.label(item.name,icon='MATERIAL')
+        layout.operator('material.delete_material',icon='X',text="",emboss=False).material_name = item.name
 
 class FD_UL_scenes(UIList):
     
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         layout.label(item.name,icon='SCENE_DATA')
-
+        layout.operator('scene.delete_scene',icon='X',text="",emboss=False).scene_name = item.name
+        
 class FD_UL_groups(UIList):
     
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         layout.label(item.name,icon='GROUP')
+        layout.operator('group.delete_group',icon='X',text="",emboss=False).group_name = item.name
 
 # Add-ons Preferences Update Panel
 
@@ -979,6 +1140,11 @@ def register():
     bpy.utils.register_class(WORLD_OT_create_world_from_hdr)
     bpy.utils.register_class(SCENE_OT_set_background_image_scale)
     bpy.utils.register_class(SCENE_PT_outliner)
+    bpy.utils.register_class(SCENE_OT_delete_scene)
+    bpy.utils.register_class(OBJECT_OT_delete_object)
+    bpy.utils.register_class(MATERIAL_OT_delete_material)
+    bpy.utils.register_class(GROUP_OT_delete_group)
+    bpy.utils.register_class(WORLD_OT_delete_world)
     bpy.utils.register_class(FD_UL_objects)
     bpy.utils.register_class(FD_UL_worlds)
     bpy.utils.register_class(FD_UL_materials)
@@ -1002,6 +1168,11 @@ def unregister():
     bpy.utils.unregister_class(SCENE_OT_namedlayer_show_all)
     bpy.utils.unregister_class(GROUP_OT_make_group_from_selection)
     bpy.utils.unregister_class(SCENE_PT_outliner)
+    bpy.utils.unregister_class(SCENE_OT_delete_scene)
+    bpy.utils.unregister_class(OBJECT_OT_delete_object)
+    bpy.utils.unregister_class(MATERIAL_OT_delete_material)
+    bpy.utils.unregister_class(WORLD_OT_delete_world)
+    bpy.utils.unregister_class(GROUP_OT_delete_group)
     bpy.utils.unregister_class(FD_UL_objects)
     bpy.utils.unregister_class(FD_UL_worlds)
     bpy.utils.unregister_class(FD_UL_materials)

@@ -1,6 +1,25 @@
+import bpy
 import os
 
 LIBRARY_FOLDER = os.path.join(os.path.dirname(__file__),"data")
+LIBRARY_PATH_FILENAME = "blender_pro_paths.xml"
+
+def get_wm_props():
+    wm = bpy.context.window_manager
+    return wm.bp_lib
+
+def get_thumbnail_file_path():
+    return os.path.join(os.path.dirname(__file__),"thumbnail.blend")
+
+def get_library_path_file():
+    """ Returns the path to the file that stores all of the library paths.
+    """
+    path = os.path.join(bpy.utils.user_resource('SCRIPTS'), "blender_pro")
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+        
+    return os.path.join(path,LIBRARY_PATH_FILENAME)
 
 def get_folder_enum_previews(path,key):
     """ Returns: ImagePreviewCollection

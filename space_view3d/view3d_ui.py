@@ -145,29 +145,75 @@ class VIEW3D_MT_add_object(bpy.types.Menu):
 
         # Note: was EXEC_AREA, but this context does not have the 'rv3d', which prevents
         #       "align_view" to work on first call (see [#32719]).
-        layout.operator_context = 'INVOKE_REGION_WIN'
-        layout.operator("view3d.draw_mesh", icon='MESH_GRID')
-
         layout.operator_context = 'EXEC_REGION_WIN'
-        layout.separator()
+
+        #layout.operator_menu_enum("object.mesh_add", "type", text="Mesh", icon='OUTLINER_OB_MESH')
         layout.menu("INFO_MT_mesh_add", icon='OUTLINER_OB_MESH')
 
+        #layout.operator_menu_enum("object.curve_add", "type", text="Curve", icon='OUTLINER_OB_CURVE')
         layout.menu("INFO_MT_curve_add", icon='OUTLINER_OB_CURVE')
-        layout.operator_context = 'EXEC_REGION_WIN'
+        #layout.operator_menu_enum("object.surface_add", "type", text="Surface", icon='OUTLINER_OB_SURFACE')
+        layout.menu("INFO_MT_surface_add", icon='OUTLINER_OB_SURFACE')
+        layout.menu("INFO_MT_metaball_add", text="Metaball", icon='OUTLINER_OB_META')
         layout.operator("object.text_add", text="Text", icon='OUTLINER_OB_FONT')
         layout.separator()
 
+        layout.menu("INFO_MT_armature_add", icon='OUTLINER_OB_ARMATURE')
+        layout.operator("object.add", text="Lattice", icon='OUTLINER_OB_LATTICE').type = 'LATTICE'
         layout.operator_menu_enum("object.empty_add", "type", text="Empty", icon='OUTLINER_OB_EMPTY')
         layout.separator()
-        layout.operator("view3d.add_camera",text="Camera",icon='OUTLINER_OB_CAMERA')
-        layout.menu("VIEW3D_MT_add_lamp", icon='OUTLINER_OB_LAMP')
+
+        layout.operator("object.speaker_add", text="Speaker", icon='OUTLINER_OB_SPEAKER')
         layout.separator()
-        
+
+        layout.operator("view3d.add_camera",text="Camera",icon='OUTLINER_OB_CAMERA')
+
+#         if INFO_MT_camera_add.is_extended():
+#             layout.menu("INFO_MT_camera_add", icon='OUTLINER_OB_CAMERA')
+#         else:
+#             INFO_MT_camera_add.draw(self, context)
+
+        layout.menu("INFO_MT_lamp_add", icon='OUTLINER_OB_LAMP')
+        layout.separator()
+
+        layout.operator_menu_enum("object.effector_add", "type", text="Force Field", icon='OUTLINER_OB_FORCE_FIELD')
+        layout.separator()
+
         if len(bpy.data.groups) > 10:
             layout.operator_context = 'INVOKE_REGION_WIN'
-            layout.operator("object.group_instance_add", text="Group Instance...", icon='OUTLINER_OB_EMPTY')
+            layout.operator("object.group_instance_add", text="Group Instance...", icon='OUTLINER_OB_GROUP_INSTANCE')
         else:
-            layout.operator_menu_enum("object.group_instance_add", "group", text="Group Instance", icon='OUTLINER_OB_EMPTY')
+            layout.operator_menu_enum("object.group_instance_add", "group", text="Group Instance", icon='OUTLINER_OB_GROUP_INSTANCE')
+                    
+#         layout = self.layout
+# 
+#         # note, don't use 'EXEC_SCREEN' or operators wont get the 'v3d' context.
+# 
+#         # Note: was EXEC_AREA, but this context does not have the 'rv3d', which prevents
+#         #       "align_view" to work on first call (see [#32719]).
+#         layout.operator_context = 'INVOKE_REGION_WIN'
+#         layout.operator("view3d.draw_mesh", icon='MESH_GRID')
+# 
+#         layout.operator_context = 'EXEC_REGION_WIN'
+#         layout.separator()
+#         layout.menu("INFO_MT_mesh_add", icon='OUTLINER_OB_MESH')
+# 
+#         layout.menu("INFO_MT_curve_add", icon='OUTLINER_OB_CURVE')
+#         layout.operator_context = 'EXEC_REGION_WIN'
+#         layout.operator("object.text_add", text="Text", icon='OUTLINER_OB_FONT')
+#         layout.separator()
+# 
+#         layout.operator_menu_enum("object.empty_add", "type", text="Empty", icon='OUTLINER_OB_EMPTY')
+#         layout.separator()
+#         layout.operator("view3d.add_camera",text="Camera",icon='OUTLINER_OB_CAMERA')
+#         layout.menu("VIEW3D_MT_add_lamp", icon='OUTLINER_OB_LAMP')
+#         layout.separator()
+#         
+#         if len(bpy.data.groups) > 10:
+#             layout.operator_context = 'INVOKE_REGION_WIN'
+#             layout.operator("object.group_instance_add", text="Group Instance...", icon='OUTLINER_OB_EMPTY')
+#         else:
+#             layout.operator_menu_enum("object.group_instance_add", "group", text="Group Instance", icon='OUTLINER_OB_EMPTY')
 
 
 class VIEW3D_MT_add_lamp(bpy.types.Menu):

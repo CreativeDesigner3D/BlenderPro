@@ -1061,6 +1061,8 @@ class OPS_place_area_lamp(bpy.types.Operator):
         obj_lamp = bpy.data.objects.new("Room Lamp", lamp)
         context.scene.objects.link(obj_lamp)
         self.lamp = obj_lamp
+        self.lamp.data.use_nodes = True
+#         bpy.ops.cycles.use_shading_nodes()
         
         #CREATE CUBE
 #         self.cube = Assembly()

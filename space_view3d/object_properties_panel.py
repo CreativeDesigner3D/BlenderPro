@@ -1038,6 +1038,9 @@ def draw_light_properties(layout,obj,context):
     split = row.split(percentage=0.4)     
     split.prop(clamp, "cast_shadow",text="Cast Shadows")
     split.prop(clamp, "use_multiple_importance_sampling")
+    
+    if lamp.type == 'AREA':
+        layout.prop(lamp.cycles,'is_portal')
         
 def draw_object_properties(layout,obj,context):
     props = get_scene_props(bpy.context.scene)

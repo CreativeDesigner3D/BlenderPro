@@ -69,7 +69,7 @@ def get_selection_point(context, event, ray_max=10000.0,objects=None,floor=None,
                         yield (obj, obj.matrix_world.copy())
                          
     #                 if obj.draw_type != 'WIRE':
-                    if obj.type == 'MESH':
+                    if obj.type == 'MESH' and obj.hide_select == False:
                         yield (obj, obj.matrix_world.copy())
     
                     if obj.dupli_type != 'NONE':

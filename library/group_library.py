@@ -1,35 +1,84 @@
 import bpy
 import os
+import subprocess
 from ..bp_lib import utils
-from . import library_utils
+from . import utils_library
 
-OBJECT_FOLDER = os.path.join(library_utils.LIBRARY_FOLDER,"groups")
+GROUP_FOLDER = os.path.join(utils_library.LIBRARY_FOLDER,"groups")
 preview_collections = {}
-preview_collections["group_categories"] = library_utils.create_image_preview_collection()
-preview_collections["group_items"] = library_utils.create_image_preview_collection()
+preview_collections["group_categories"] = utils_library.create_image_preview_collection()
+preview_collections["group_items"] = utils_library.create_image_preview_collection()
 
+def get_library_path():
+    props = utils_library.get_wm_props()
+    if os.path.exists(props.group_library_path):
+        return props.group_library_path
+    else:
+        return GROUP_FOLDER
+    
 def enum_group_categories(self,context):
     if context is None:
         return []
     
-    icon_dir = os.path.join(OBJECT_FOLDER)
+    icon_dir = get_library_path()
     pcoll = preview_collections["group_categories"]
-    return library_utils.get_folder_enum_previews(icon_dir,pcoll)
+    return utils_library.get_folder_enum_previews(icon_dir,pcoll)
 
 def enum_group_names(self,context):
     if context is None:
         return []
     
-    icon_dir = os.path.join(OBJECT_FOLDER,self.group_category)
+    icon_dir = os.path.join(get_library_path(),self.group_category)
     pcoll = preview_collections["group_items"]
-    return library_utils.get_image_enum_previews(icon_dir,pcoll)
+    return utils_library.get_image_enum_previews(icon_dir,pcoll)
 
 def update_group_category(self,context):
     if preview_collections["group_items"]:
         bpy.utils.previews.remove(preview_collections["group_items"])
-        preview_collections["group_items"] = library_utils.create_image_preview_collection()     
+        preview_collections["group_items"] = utils_library.create_image_preview_collection()     
         
     enum_group_names(self,context)
+
+def clear_group_categories(self,context):
+    if preview_collections["group_categories"]:
+        bpy.utils.previews.remove(preview_collections["group_categories"])
+        preview_collections["group_categories"] = utils_library.create_image_preview_collection()
+
+    enum_group_categories(self,context)
+
+class LIBRARY_MT_group_library(bpy.types.Menu):
+    bl_label = "Group Library"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator('library.save_group_to_library',icon='BACK')
+        layout.separator()
+        layout.operator('library.open_browser_window',icon='FILE_FOLDER').path = get_library_path()
+        layout.operator('library.create_new_folder',icon='NEWFOLDER').path = get_library_path()        
+        layout.operator('library.change_group_library_path',icon='EXTERNAL_DATA')        
+
+class LIBRARY_OT_change_group_library_path(bpy.types.Operator):
+    bl_idname = "library.change_group_library_path"
+    bl_label = "Change Group Library Path"
+
+    directory = bpy.props.StringProperty(subtype="DIR_PATH")
+    
+    def draw(self, context):
+        pass
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        if os.path.exists(get_library_path()):
+            self.directory = get_library_path()
+        wm.fileselect_add(self)      
+        return {'RUNNING_MODAL'}
+
+    def execute(self, context):
+        if os.path.exists(self.directory):
+            wm = context.window_manager
+            wm.bp_lib.group_library_path = self.directory
+            clear_group_categories(self,context)
+        return {'FINISHED'}
 
 class LIBRARY_OT_add_group_from_library(bpy.types.Operator):
     bl_idname = "library.add_group_from_library"
@@ -54,6 +103,7 @@ class LIBRARY_OT_add_group_from_library(bpy.types.Operator):
     def invoke(self,context,event):
         self.parent_objects = []
         self.group_objects = []
+        update_group_category(self,context)
         wm = context.window_manager
         return wm.invoke_props_dialog(self, width=200)
         
@@ -71,7 +121,7 @@ class LIBRARY_OT_add_group_from_library(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def get_group(self,context):
-        group_file_path = os.path.join(OBJECT_FOLDER ,self.group_category,self.group_name + ".blend")
+        group_file_path = os.path.join(get_library_path() ,self.group_category,self.group_name + ".blend")
         with bpy.data.libraries.load(group_file_path, False, False) as (data_from, data_to):
             
             for grp in data_from.groups:
@@ -155,9 +205,102 @@ class LIBRARY_OT_add_group_from_library(bpy.types.Operator):
         context.area.tag_redraw()
         return {'FINISHED'}
     
+class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
+    bl_idname = "library.save_group_to_library"
+    bl_label = "Save Group to Library"
+    
+    grp_name = bpy.props.StringProperty(name="Group Name")
+    group_category = bpy.props.EnumProperty(name="Object Category",items=enum_group_categories,update=update_group_category)
+    
+    @classmethod
+    def poll(cls, context):
+        if context.scene.outliner.selected_group_index + 1 <= len(bpy.data.groups):
+            return True
+        else:
+            return False
+
+    def check(self, context):
+        return True
+
+    def create_object_thumbnail_script(self,source_dir,source_file,group_name):
+        file = open(os.path.join(bpy.app.tempdir,"thumb_temp.py"),'w')
+        file.write("import bpy\n")
+        file.write("with bpy.data.libraries.load(r'" + source_file + "', False, True) as (data_from, data_to):\n")
+        file.write("    for grp in data_from.groups:\n")
+        file.write("        if grp == '" + group_name + "':\n")
+        file.write("            data_to.groups = [grp]\n")
+        file.write("            break\n")
+        file.write("for grp in data_to.groups:\n")
+        file.write("    for obj in grp.objects:\n")
+        file.write("        bpy.context.scene.objects.link(obj)\n")
+        file.write("        obj.select = True\n")
+        file.write("        bpy.context.scene.objects.active = obj\n")
+        file.write("    bpy.ops.view3d.camera_to_view_selected()\n")
+        file.write("    render = bpy.context.scene.render\n")
+        file.write("    render.use_file_extension = True\n")
+        file.write("    render.filepath = r'" + os.path.join(source_dir,group_name) + "'\n")
+        file.write("    bpy.ops.render.render(write_still=True)\n")
+        file.close()
+        return os.path.join(bpy.app.tempdir,'thumb_temp.py')
+        
+    def create_object_save_script(self,source_dir,source_file,group_name):
+        file = open(os.path.join(bpy.app.tempdir,"save_temp.py"),'w')
+        file.write("import bpy\n")
+        file.write("import os\n")
+        file.write("bpy.context.user_preferences.filepaths.save_version = 0\n")
+        file.write("with bpy.data.libraries.load(r'" + source_file + "', False, True) as (data_from, data_to):\n")
+        file.write("    for grp in data_from.groups:\n")
+        file.write("        if grp == '" + group_name + "':\n")
+        file.write("            data_to.groups = [grp]\n")
+        file.write("            break\n")
+        file.write("for grp in data_to.groups:\n")
+        file.write("    for obj in grp.objects:\n")
+        file.write("        bpy.context.scene.objects.link(obj)\n")
+        file.write("        obj.select = True\n")
+        file.write("        bpy.context.scene.objects.active = obj\n")
+        file.write("bpy.ops.wm.save_as_mainfile(filepath=r'" + os.path.join(source_dir,group_name) + ".blend')\n")
+        file.close()
+        return os.path.join(bpy.app.tempdir,'save_temp.py')
+
+    def invoke(self,context,event):
+        grp = bpy.data.groups[context.scene.outliner.selected_group_index]
+        self.grp_name = grp.name
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width=300)
+        
+    def draw(self, context):
+        layout = self.layout
+        layout.label("Select folder to save group to")
+        layout.prop(self,'group_category',text="",icon='FILE_FOLDER')
+        layout.layout("Name: " + self.grp_name)
+        
+    def execute(self, context):
+        
+        grp_to_save = bpy.data.groups[context.scene.outliner.selected_group_index]
+        directory_to_save_to = os.path.join(get_library_path() ,self.group_category) 
+        
+        thumbnail_script_path = self.create_object_thumbnail_script(directory_to_save_to, bpy.data.filepath, grp_to_save.name)
+        save_script_path = self.create_object_save_script(directory_to_save_to, bpy.data.filepath, grp_to_save.name)
+
+#         subprocess.Popen(r'explorer ' + bpy.app.tempdir)
+        
+        subprocess.call(bpy.app.binary_path + ' "' + utils_library.get_thumbnail_file_path() + '" -b --python "' + thumbnail_script_path + '"')   
+        subprocess.call(bpy.app.binary_path + ' -b --python "' + save_script_path + '"')
+        
+        os.remove(thumbnail_script_path)
+        os.remove(save_script_path)        
+        
+        return {'FINISHED'}    
+    
 def register():
+    bpy.utils.register_class(LIBRARY_MT_group_library)
     bpy.utils.register_class(LIBRARY_OT_add_group_from_library)
+    bpy.utils.register_class(LIBRARY_OT_save_group_to_library)
+    bpy.utils.register_class(LIBRARY_OT_change_group_library_path)
 
 def unregister():
+    bpy.utils.unregister_class(LIBRARY_MT_group_library)
     bpy.utils.unregister_class(LIBRARY_OT_add_group_from_library)
+    bpy.utils.unregister_class(LIBRARY_OT_save_group_to_library)
+    bpy.utils.unregister_class(LIBRARY_OT_change_group_library_path)
     
