@@ -314,6 +314,7 @@ class LIBRARY_OT_save_material_to_library(bpy.types.Operator):
     def invoke(self,context,event):
         mat = bpy.data.materials[context.scene.outliner.selected_material_index]
         self.mat_name = mat.name
+        clear_material_categories(self,context)
         wm = context.window_manager
         return wm.invoke_props_dialog(self, width=300)
         

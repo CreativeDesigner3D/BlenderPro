@@ -1067,7 +1067,17 @@ class FD_UL_objects(UIList):
         if item.type == 'FONT':
             layout.label(item.name,icon='OUTLINER_OB_FONT')    
         if item.type == 'CURVE':
-            layout.label(item.name,icon='OUTLINER_OB_CURVE')                          
+            layout.label(item.name,icon='OUTLINER_OB_CURVE')     
+        if item.type == 'ARMATURE':
+            layout.label(item.name,icon='OUTLINER_OB_ARMATURE')       
+        if item.type == 'LATTICE':
+            layout.label(item.name,icon='OUTLINER_OB_LATTICE')     
+        if item.type == 'SPEAKER':
+            layout.label(item.name,icon='OUTLINER_OB_SPEAKER')      
+        if item.type == 'SURFACE':
+            layout.label(item.name,icon='OUTLINER_OB_SURFACE')    
+        if item.type == 'META':
+            layout.label(item.name,icon='OUTLINER_OB_META')                                                                       
         if context.scene.objects.active:
             if context.scene.objects.active.name == item.name:
                 layout.label('',icon='FILE_TICK')

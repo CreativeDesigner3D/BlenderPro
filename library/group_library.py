@@ -265,14 +265,15 @@ class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
     def invoke(self,context,event):
         grp = bpy.data.groups[context.scene.outliner.selected_group_index]
         self.grp_name = grp.name
+        clear_group_categories(self,context)
         wm = context.window_manager
         return wm.invoke_props_dialog(self, width=300)
         
     def draw(self, context):
         layout = self.layout
-        layout.label("Select folder to save group to")
+        layout.label("Select folder to save group to",icon='FILE_FOLDER')
         layout.prop(self,'group_category',text="",icon='FILE_FOLDER')
-        layout.layout("Name: " + self.grp_name)
+        layout.label("Name: " + self.grp_name)
         
     def execute(self, context):
         

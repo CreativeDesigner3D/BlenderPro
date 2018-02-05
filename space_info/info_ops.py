@@ -27,9 +27,6 @@ class OPS_render_settings(bpy.types.Operator):
         cycles = scene.cycles
         image_settings = rd.image_settings
 
-        rl = rd.layers.active
-        linestyle = rl.freestyle_settings.linesets[0].linestyle
-        
         box = layout.box()
         row = box.row(align=True)
         if rd.has_multiple_engines:
@@ -62,10 +59,13 @@ class OPS_render_settings(bpy.types.Operator):
         row = box.row()
         row.prop(rd, "use_freestyle", text="Use Freestyle")       
         if rd.use_freestyle: 
-            row = box.row()
-            row.prop(linestyle, "color", text="Line Color")
-            row = box.row()
-            row.prop(bpy.data.worlds[0], "horizon_color", text="Background Color")        
+            rl = rd.layers.active
+            if len(rl.freestyle_settings.linesets) > 0:
+                linestyle = rl.freestyle_settings.linesets[0].linestyle            
+                row = box.row()
+                row.prop(linestyle, "color", text="Line Color")
+                row = box.row()
+                row.prop(bpy.data.worlds[0], "horizon_color", text="Background Color")        
         
 class OPS_change_interface(bpy.types.Operator): 
     bl_idname = "info.change_interface"
