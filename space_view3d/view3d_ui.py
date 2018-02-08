@@ -344,65 +344,27 @@ class VIEW3D_PT_Standard_Objects(bpy.types.Panel):
     bl_region_type = "TOOLS"
     bl_category = "Draw"
     bl_context = "objectmode"
+    bl_options = {'HIDE_HEADER'}
 
     def draw(self, context):
         
         box = self.layout.box()
         col = box.column(align=True)
         row = col.row(align=True)
-        row.label("Mesh",icon='OUTLINER_OB_MESH')
-        
+        row.label("Drawing Tools",icon='GREASEPENCIL')
+        col.separator()
         row = col.row(align=True)
         row.scale_y = 1.3        
-        row.operator("view3d.draw_assembly", icon='SURFACE_NCYLINDER',text="Draw Assembly")   
-
-        row = col.row(align=True)
+        row.operator("view3d.draw_assembly", icon='MESH_CUBE',text="Draw Box") 
+        row = col.row(align=True)  
         row.scale_y = 1.3        
         row.operator("view3d.draw_plane", icon='MESH_PLANE',text="Draw Plane")   
-        
         row = col.row(align=True)
         row.scale_y = 1.3        
-        row.operator("view3d.add_text", icon='MESH_PLANE',text="Add Text")         
-        
-        box = self.layout.box()
-        col = box.column(align=True)
-        row = col.row(align=True)
-        row.label("Curves",icon='OUTLINER_OB_CURVE')
-        
-        row = col.row(align=True)
-        row.scale_y = 1.3        
-        row.operator("view3d.draw_curve", icon='CURVE_DATA',text="Select Points To Draw")  
-
-        row = col.row(align=True)
-        row.scale_y = 1.3        
-        row.operator("view3d.draw_curve", icon='CURVE_BEZCIRCLE',text="Draw Circle")  
-        
-        box = self.layout.box()
-        col = box.column(align=True)
-        row = col.row(align=True)
-        row.label("Empties",icon='OUTLINER_OB_EMPTY')
-        
+        row.operator("view3d.draw_curve", icon='CURVE_DATA',text="Draw Lines")          
         row = col.row(align=True)
         row.scale_y = 1.3
-        row.operator("view3d.place_empty", icon='OUTLINER_DATA_EMPTY',text="Place Empty Object")    
-
-        box = self.layout.box()
-        col = box.column(align=True)
-        row = col.row(align=True)
-        row.label("Lamps",icon='OUTLINER_OB_LAMP')
-        
-        row = col.row(align=True)
-        row.scale_y = 1.3
-        row.operator("view3d.place_area_lamp", icon='LAMP_POINT',text="Draw Area Lamp")
-        
-        box = self.layout.box()
-        col = box.column(align=True)
-        row = col.row(align=True)
-        row.label("Cameras",icon='OUTLINER_OB_CAMERA')
-        
-        row = col.row(align=True)
-        row.scale_y = 1.3
-        row.operator("view3d.draw_curve", icon='CAMERA_DATA',text="Place Camera")
+        row.operator("view3d.place_area_lamp", icon='LAMP_POINT',text="Draw Area Lamp")        
 
 def register():
     clear_view3d_properties_shelf()
