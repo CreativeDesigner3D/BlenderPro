@@ -225,6 +225,10 @@ class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
     def create_object_thumbnail_script(self,source_dir,source_file,group_name):
         file = open(os.path.join(bpy.app.tempdir,"thumb_temp.py"),'w')
         file.write("import bpy\n")
+        file.write("for mat in bpy.data.materials:\n")
+        file.write("    bpy.data.materials.remove(mat,do_unlink=True)\n")
+        file.write("for obj in bpy.data.objects:\n")
+        file.write("    bpy.data.objects.remove(obj,do_unlink=True)\n")            
         file.write("with bpy.data.libraries.load(r'" + source_file + "', False, True) as (data_from, data_to):\n")
         file.write("    for grp in data_from.groups:\n")
         file.write("        if grp == '" + group_name + "':\n")

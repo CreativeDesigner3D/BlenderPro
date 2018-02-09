@@ -318,7 +318,7 @@ class LIBRARY_OT_save_material_to_library(bpy.types.Operator):
         wm = context.window_manager
         return wm.invoke_props_dialog(self, width=300)
         
-    def create_object_thumbnail_script(self,source_dir,source_file,material_name):
+    def create_material_thumbnail_script(self,source_dir,source_file,material_name):
         file = open(os.path.join(bpy.app.tempdir,"thumb_temp.py"),'w')
         file.write("import bpy\n")
         file.write("with bpy.data.libraries.load(r'" + source_file + "', False, True) as (data_from, data_to):\n")
@@ -353,9 +353,13 @@ class LIBRARY_OT_save_material_to_library(bpy.types.Operator):
         
         return os.path.join(bpy.app.tempdir,'thumb_temp.py')
         
-    def create_object_save_script(self,source_dir,source_file,material_name):
+    def create_material_save_script(self,source_dir,source_file,material_name):
         file = open(os.path.join(bpy.app.tempdir,"save_temp.py"),'w')
         file.write("import bpy\n")
+        file.write("for mat in bpy.data.materials:\n")
+        file.write("    bpy.data.materials.remove(mat,do_unlink=True)\n")
+        file.write("for obj in bpy.data.objects:\n")
+        file.write("    bpy.data.objects.remove(obj,do_unlink=True)\n")        
         file.write("with bpy.data.libraries.load(r'" + source_file + "', False, True) as (data_from, data_to):\n")
         file.write("    for mat in data_from.materials:\n")
         file.write("        if mat == '" + material_name + "':\n")
@@ -396,8 +400,8 @@ class LIBRARY_OT_save_material_to_library(bpy.types.Operator):
         mat_to_save = bpy.data.materials[context.scene.outliner.selected_material_index]
         directory_to_save_to = os.path.join(get_library_path() ,self.material_category)
         
-        thumbnail_script_path = self.create_object_thumbnail_script(directory_to_save_to, bpy.data.filepath, mat_to_save.name)
-        save_script_path = self.create_object_save_script(directory_to_save_to, bpy.data.filepath, mat_to_save.name)
+        thumbnail_script_path = self.create_material_thumbnail_script(directory_to_save_to, bpy.data.filepath, mat_to_save.name)
+        save_script_path = self.create_material_save_script(directory_to_save_to, bpy.data.filepath, mat_to_save.name)
         
 #         subprocess.Popen(r'explorer ' + bpy.app.tempdir)
         
