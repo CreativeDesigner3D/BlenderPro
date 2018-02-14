@@ -192,6 +192,8 @@ class LIBRARY_OT_add_object_from_library(bpy.types.Operator):
         context.window.cursor_set('DEFAULT')
         if self.drawing_plane:
             utils.delete_obj_list([self.drawing_plane])
+        bpy.ops.object.select_all(action='DESELECT')
+        self.obj.select = True        
         context.area.tag_redraw()
         return {'FINISHED'}
 
