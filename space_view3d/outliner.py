@@ -431,7 +431,9 @@ class GROUP_OT_make_group_from_selection(Operator):
     bl_options = {'UNDO'}
 
     group_name = StringProperty(name="Group Name",default = "New Group")
-
+    
+    add_parent_object = BoolProperty(name="Add Parent Object",default = False,description="This will add a object to be the parent for all of the objects in the group")
+    
     @classmethod
     def poll(cls, context):
         if len(context.selected_objects) > 0:
@@ -440,10 +442,28 @@ class GROUP_OT_make_group_from_selection(Operator):
             return False
 
     def execute(self, context):
+        parent_obj = None
+        
+        if self.add_parent_object:
+            parent_obj = bpy.data.objects.new(self.group_name + " Parent",None)
+            bpy.context.scene.objects.link(parent_obj)
+            parent_obj.select = True
+            parent_obj.location = context.active_object.location
+            
         for obj in context.selected_objects:
             obj.hide = False
             obj.hide_select = False
             obj.select = True
+            if parent_obj and obj.parent is None and obj != parent_obj:
+                #WORKING ON PLACEMENT AFTER PARENTING
+#                 new_pos = parent_obj.matrix_world.inverted() * obj.matrix_world
+#                 new_pos = obj.matrix_world * parent_obj.matrix_world.inverted()
+#                 new_pos = obj.matrix_world.inverted() * parent_obj.matrix_world
+#                 new_pos = obj.matrix_world * parent_obj.matrix_world
+                
+                obj.parent = parent_obj
+#                 obj.matrix_world = new_pos
+                
         bpy.ops.group.create(name=self.group_name)
         return {'FINISHED'}
 
@@ -453,7 +473,8 @@ class GROUP_OT_make_group_from_selection(Operator):
 
     def draw(self, context):
         layout = self.layout
-        layout.prop(self,"group_name")    
+        layout.prop(self,"group_name")   
+        layout.prop(self,"add_parent_object") 
     
 class WORLD_OT_create_world_from_hdr(Operator):
     """Creates a New World from a HDR"""
@@ -1005,6 +1026,7 @@ class SCENE_PT_outliner(Panel):
     def draw_groups(self,layout,context):
         scene = context.scene
         layout.operator('group.make_group_from_selection',icon='ZOOMIN')
+
         row = layout.row(align=True)
         row.scale_y = 1.3        
         row.operator("library.add_group_from_library",text="Group Library",icon='EXTERNAL_DATA')
@@ -1017,6 +1039,9 @@ class SCENE_PT_outliner(Panel):
                 group = bpy.data.groups[scene.outliner.selected_group_index]
                 
                 box.label("Group Properties: " + group.name)
+                row = box.row()
+                row.operator_context = 'EXEC_REGION_WIN'                
+                row.operator('object.group_link',text="Add Selected to Group",icon='ZOOMIN').group = group.name                
                 box.prop(group,'name')
                 box.template_list("FD_UL_objects", "", group, "objects", scene.outliner, "selected_group_object_index", rows=4)  
 
