@@ -1054,11 +1054,12 @@ class SCENE_PT_outliner(Panel):
         row = col.row(align=True)
         row.prop_enum(scene.outliner, "outliner_tabs", 'SCENES', icon='SCENE_DATA', text="Scenes") 
         row.prop_enum(scene.outliner, "outliner_tabs", 'WORLDS', icon='WORLD_DATA', text="Worlds") 
-        row.prop_enum(scene.outliner, "outliner_tabs", 'MATERIALS', icon='MATERIAL', text="Materials") 
+        row.prop_enum(scene.outliner, "outliner_tabs", 'LAYERS', icon='RENDERLAYERS', text="Layers") 
+        
         row = col.row(align=True)
         row.prop_enum(scene.outliner, "outliner_tabs", 'OBJECTS', icon='OBJECT_DATA', text="Objects") 
         row.prop_enum(scene.outliner, "outliner_tabs", 'GROUPS', icon='OUTLINER_OB_GROUP_INSTANCE', text="Groups") 
-        row.prop_enum(scene.outliner, "outliner_tabs", 'LAYERS', icon='RENDERLAYERS', text="Layers") 
+        row.prop_enum(scene.outliner, "outliner_tabs", 'MATERIALS', icon='MATERIAL', text="Materials") 
 
         if scene.outliner.outliner_tabs == 'SCENES':
             self.draw_scenes(box, context)

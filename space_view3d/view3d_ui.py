@@ -232,10 +232,17 @@ class VIEW3D_MT_tools(bpy.types.Menu):
     bl_label = "Object"
 
     def draw(self, context):
+        edit_mesh = False
+        if context.object and context.object.type == 'MESH' and context.object.mode == 'EDIT':
+            edit_mesh = True
+            
         layout = self.layout
         layout.menu("VIEW3D_MT_objecttools",icon='OBJECT_DATA')
         layout.menu("VIEW3D_MT_cursor_tools",icon='CURSOR')
         layout.menu("VIEW3D_MT_selectiontools",icon='MAN_TRANS')
+        row = layout.row()
+        row.enabled = edit_mesh
+        row.menu("VIEW3D_MT_editmeshtools",icon='EDITMODE_HLT')
         layout.separator()
         layout.operator("view3d.snapping_options",icon='SNAP_ON')
 
@@ -316,9 +323,7 @@ class VIEW3D_MT_objecttools(bpy.types.Menu):
         layout.separator()
         layout.operator("object.duplicate_move",icon='PASTEDOWN')
         layout.operator("object.convert", text="Convert to Mesh",icon='MOD_REMESH').target = 'MESH'
-        layout.operator("object.join",icon='ROTATECENTER')
-        layout.separator()
-        layout.menu("VIEW3D_MT_selectiontools",icon='MOD_MULTIRES')            
+        layout.operator("object.join",icon='ROTATECENTER')         
         layout.separator()
         layout.menu("VIEW3D_MT_origintools",icon='SPACE2')
         layout.separator()
@@ -327,6 +332,30 @@ class VIEW3D_MT_objecttools(bpy.types.Menu):
         layout.operator("object.delete",icon='X').use_global = False
 
 
+class VIEW3D_MT_editmeshtools(bpy.types.Menu):
+    bl_context = "objectmode"
+    bl_label = "Edit Mesh Tools"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator("view3d.edit_mesh_extrude_move_normal",icon='CURVE_PATH')
+        layout.operator("mesh.inset",icon='MOD_MESHDEFORM')
+        layout.operator("mesh.knife_tool",icon='SCULPTMODE_HLT')
+        layout.operator("mesh.subdivide",icon='OUTLINER_OB_LATTICE')
+        layout.operator("mesh.loopcut_slide",icon='SNAP_EDGE')
+        layout.operator("transform.edge_slide",icon='SNAP_EDGE')
+        layout.operator("mesh.bevel",icon='MOD_BEVEL')
+        layout.operator("mesh.edge_face_add",icon='SNAP_FACE')
+        layout.operator("mesh.separate",icon='UV_ISLANDSEL').type = 'SELECTED'
+        layout.operator("mesh.remove_doubles",icon='MOD_DISPLACE')
+        layout.operator("mesh.bisect",icon='MOD_DISPLACE')
+        layout.operator("mesh.duplicate_move",icon='PASTEDOWN')
+        layout.operator("transform.vertex_random",icon='PASTEDOWN')
+        layout.operator("mesh.normals_make_consistent",icon='PASTEDOWN')
+
+        layout.menu('VIEW3D_MT_edit_mesh_delete',icon='X')
+        layout.menu('VIEW3D_MT_edit_mesh_delete',icon='X')
+        
 class VIEW3D_MT_mesh_selection(bpy.types.Menu):
     bl_label = "Menu"
 
@@ -384,6 +413,7 @@ def register():
     bpy.utils.register_class(VIEW3D_MT_origintools) 
     bpy.utils.register_class(VIEW3D_MT_shadetools) 
     bpy.utils.register_class(VIEW3D_MT_objecttools) 
+    bpy.utils.register_class(VIEW3D_MT_editmeshtools) 
     bpy.utils.register_class(VIEW3D_MT_mesh_selection)  
     bpy.utils.register_class(VIEW3D_PT_Standard_Objects)
     

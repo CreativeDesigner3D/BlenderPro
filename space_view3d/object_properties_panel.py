@@ -848,6 +848,140 @@ def draw_constraint(con,layout,obj):
 def draw_mesh_properties(layout,obj,context):
     layout.label('Mesh Properties:',icon='OUTLINER_OB_MESH')
     layout.prop(obj,'draw_type',text="Draw Type")
+    draw_vertex_groups(layout, obj, context)
+    draw_shape_keys(layout,obj,context)
+    draw_uv_maps(layout,obj,context)
+    
+def draw_vertex_groups(layout,obj,context):
+    ob = context.object
+    group = ob.vertex_groups.active
+
+    rows = 2
+    if group:
+        rows = 4
+    
+    box = layout.box()
+    box.label("Vertex Groups:",icon='GROUP_VERTEX')
+    row = box.row()
+    row.template_list("MESH_UL_vgroups", "", ob, "vertex_groups", ob.vertex_groups, "active_index", rows=rows)
+
+    col = row.column(align=True)
+    col.operator("object.vertex_group_add", icon='ZOOMIN', text="")
+    col.operator("object.vertex_group_remove", icon='ZOOMOUT', text="").all = False
+    col.menu("MESH_MT_vertex_group_specials", icon='DOWNARROW_HLT', text="")
+    if group:
+        col.separator()
+        col.operator("object.vertex_group_move", icon='TRIA_UP', text="").direction = 'UP'
+        col.operator("object.vertex_group_move", icon='TRIA_DOWN', text="").direction = 'DOWN'
+
+    if ob.vertex_groups and (ob.mode == 'EDIT' or (ob.mode == 'WEIGHT_PAINT' and ob.type == 'MESH' and ob.data.use_paint_mask_vertex)):
+        row = box.row()
+
+        sub = row.row(align=True)
+        sub.operator("object.vertex_group_assign", text="Assign")
+        sub.operator("object.vertex_group_remove_from", text="Remove")
+
+        sub = row.row(align=True)
+        sub.operator("object.vertex_group_select", text="Select")
+        sub.operator("object.vertex_group_deselect", text="Deselect")
+
+        box.prop(context.tool_settings, "vertex_group_weight", text="Weight")    
+    
+def draw_shape_keys(layout,obj,context):
+    ob = context.object
+    key = ob.data.shape_keys
+    kb = ob.active_shape_key
+
+    enable_edit = ob.mode != 'EDIT'
+    enable_edit_value = False
+
+    if ob.show_only_shape_key is False:
+        if enable_edit or (ob.type == 'MESH' and ob.use_shape_key_edit_mode):
+            enable_edit_value = True
+            
+    box = layout.box()
+    box.label("Shape Keys",icon='SHAPEKEY_DATA')
+    row = box.row()
+
+    rows = 2
+    if kb:
+        rows = 4
+    row.template_list("MESH_UL_shape_keys", "", key, "key_blocks", ob, "active_shape_key_index", rows=rows)
+
+    col = row.column()
+
+    sub = col.column(align=True)
+    sub.operator("object.shape_key_add", icon='ZOOMIN', text="").from_mix = False
+    sub.operator("object.shape_key_remove", icon='ZOOMOUT', text="").all = False
+    sub.menu("MESH_MT_shape_key_specials", icon='DOWNARROW_HLT', text="")
+
+    if kb:
+        col.separator()
+
+        sub = col.column(align=True)
+        sub.operator("object.shape_key_move", icon='TRIA_UP', text="").type = 'UP'
+        sub.operator("object.shape_key_move", icon='TRIA_DOWN', text="").type = 'DOWN'
+
+        split = box.split(percentage=0.4)
+        row = split.row()
+        row.enabled = enable_edit
+        row.prop(key, "use_relative")
+
+        row = split.row()
+        row.alignment = 'RIGHT'
+
+        sub = row.row(align=True)
+        sub.label()  # XXX, for alignment only
+        subsub = sub.row(align=True)
+        subsub.active = enable_edit_value
+        subsub.prop(ob, "show_only_shape_key", text="")
+        sub.prop(ob, "use_shape_key_edit_mode", text="")
+
+        sub = row.row()
+        if key.use_relative:
+            sub.operator("object.shape_key_clear", icon='X', text="")
+        else:
+            sub.operator("object.shape_key_retime", icon='RECOVER_LAST', text="")
+
+        if key.use_relative:
+            if ob.active_shape_key_index != 0:
+                row = box.row()
+                row.active = enable_edit_value
+                row.prop(kb, "value")
+
+                split = box.split()
+
+                col = split.column(align=True)
+                col.active = enable_edit_value
+                col.label(text="Range:")
+                col.prop(kb, "slider_min", text="Min")
+                col.prop(kb, "slider_max", text="Max")
+
+                col = split.column(align=True)
+                col.active = enable_edit_value
+                col.label(text="Blend:")
+                col.prop_search(kb, "vertex_group", ob, "vertex_groups", text="")
+                col.prop_search(kb, "relative_key", key, "key_blocks", text="")
+
+        else:
+            box.prop(kb, "interpolation")
+            row = box.column()
+            row.active = enable_edit_value
+            row.prop(key, "eval_time")
+    
+def draw_uv_maps(layout,obj,context):
+    me = obj.data
+    box = layout.box()
+    box.label("UV Maps",icon='GROUP_UVS')
+    
+    row = box.row()
+    col = row.column()
+
+    col.template_list("MESH_UL_uvmaps_vcols", "uvmaps", me, "uv_textures", me.uv_textures, "active_index", rows=1)
+
+    col = row.column(align=True)
+    col.operator("mesh.uv_texture_add", icon='ZOOMIN', text="")
+    col.operator("mesh.uv_texture_remove", icon='ZOOMOUT', text="")    
     
 def draw_empty_properties(layout,obj,context):
     layout.label('Empty Properties:',icon='OUTLINER_OB_EMPTY')
@@ -1213,6 +1347,10 @@ def draw_object_info(layout,obj,context):
                 row.label("Y: " + str(round(math.degrees(obj.rotation_euler.z),4)))
             else:
                 row.prop(obj,"rotation_euler",index=2,text="Z")
+                
+        row = layout.row()
+#         row.label(text="Parent:")
+        row.prop(obj, "parent", text="Parent")
 
 def draw_object_materials(layout,obj,context):
 
