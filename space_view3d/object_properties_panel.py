@@ -2,6 +2,7 @@ import bpy
 import math
 from bpy.app.translations import pgettext_iface as iface_ #for decimate modifier
 from ..bp_lib import unit, utils
+import mathutils
 
 enum_object_tabs = [('INFO'," ","Show the Main Information"),
                     ('MATERIAL',"","Show the materials assign to the object"),
@@ -16,9 +17,17 @@ def draw_modifier(mod,layout,obj):
         else:
             layout.prop(mod,'show_expanded',text="",emboss=False)
     
-    def draw_apply_close(layout,mod_name):
+    def draw_apply_close(layout):
         layout.operator('object.modifier_apply',text="",icon='EDIT',emboss=False).modifier = mod.name
+        layout.operator('object.modifier_move_up',text="",icon='TRIA_UP',emboss=False).modifier = mod.name
+        layout.operator('object.modifier_move_down',text="",icon='TRIA_DOWN',emboss=False).modifier = mod.name
         layout.operator('object.modifier_remove',text="",icon='PANEL_CLOSE',emboss=False).modifier = mod.name
+    
+    def draw_visibility(layout):
+        layout.label("Visibility:")
+        layout.prop(mod,'show_render')
+        layout.prop(mod,'show_viewport')
+        layout.prop(mod,'show_in_editmode')
     
     def draw_array_modifier(layout):
         col = layout.column(align=True)
@@ -26,9 +35,12 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_ARRAY')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
+
         
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)            
             box = col.box()
             box.prop(mod, "fit_type")
     
@@ -81,8 +93,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_BEVEL')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             split = box.split()
     
@@ -112,8 +126,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_BOOLEAN')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             split = box.split()
     
@@ -131,8 +147,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_CURVE')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             split = box.split()
     
@@ -151,8 +169,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_DECIM')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             decimate_type = mod.decimate_type
     
@@ -185,8 +205,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_EDGESPLIT')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             split = box.split()
     
@@ -204,8 +226,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='HOOK')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             split = box.split()
     
@@ -239,8 +263,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_MASK')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             split = box.split()
     
@@ -266,8 +292,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_MIRROR')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             split = box.split(percentage=0.25)
     
@@ -301,8 +329,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_SOLIDIFY')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             split = box.split()
     
@@ -353,8 +383,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_SUBSURF')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             box.row().prop(mod, "subdivision_type", expand=True)
     
@@ -375,8 +407,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_SKIN')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             box.operator("object.skin_armature_create", text="Create Armature")
     
@@ -410,8 +444,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_TRIANGULATE')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             row = box.row()
     
@@ -428,8 +464,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_SIMPLEDEFORM')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             box.row().prop(mod, "deform_method", expand=True)
     
@@ -464,8 +502,10 @@ def draw_modifier(mod,layout,obj):
         row = box.row()
         draw_show_expanded(mod,row)
         row.prop(mod,'name',text="",icon='MOD_WIREFRAME')
-        draw_apply_close(row,mod.name)
+        draw_apply_close(row)
         if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
             box = col.box()
             has_vgroup = bool(mod.vertex_group)
     
@@ -1240,7 +1280,8 @@ def draw_object_info(layout,obj,context):
 
     row = layout.row()
     row.prop(obj,'name')
-
+    row = layout.row()
+    row.prop(obj, "parent", text="Parent")
     has_hook_modifier = False
     for mod in obj.modifiers:
         if mod.type == 'HOOK':
@@ -1272,8 +1313,18 @@ def draw_object_info(layout,obj,context):
         col.label("Z: " + str(round(math.degrees(obj.rotation_euler.z),4)))
     else:
         if obj.type not in {'EMPTY','CAMERA','LAMP'}:
-            layout.label('Dimensions:')
-            col = layout.column(align=True)
+            col = layout.column(align=True)   
+            
+            row = col.row()
+            row.label('Dimensions:')
+
+#             vec = mathutils.Vector((1.0, 1.0, 1.0))            
+            if obj.scale != mathutils.Vector((1.0, 1.0, 1.0)):
+                props = row.operator('object.transform_apply',text="Apply Scale")
+                props.location = False
+                props.rotation = False
+                props.scale = True
+
             #X
             row = col.row(align=True)
             row.prop(obj,"lock_scale",index=0,text="")
@@ -1348,9 +1399,7 @@ def draw_object_info(layout,obj,context):
             else:
                 row.prop(obj,"rotation_euler",index=2,text="Z")
                 
-        row = layout.row()
-#         row.label(text="Parent:")
-        row.prop(obj, "parent", text="Parent")
+
 
 def draw_object_materials(layout,obj,context):
 
