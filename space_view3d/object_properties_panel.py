@@ -536,6 +536,75 @@ def draw_modifier(mod,layout,obj):
     
             col.prop(mod, "material_offset", text="Material Offset")                            
     
+    def draw_particle_system(layout):
+        col = layout.column(align=True)
+        box = col.box()
+        row = box.row()
+        draw_show_expanded(mod,row)
+        row.prop(mod,'name',text="",icon='PARTICLE_DATA')
+        draw_apply_close(row)
+        if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)  
+            box = col.box()
+            ps = mod.particle_system
+            split = box.split(percentage=0.32)
+
+            col = split.column()
+            col.label(text="Settings:")
+
+            col = split.column()
+            col.template_ID(ps, "settings", new="particle.new") 
+                       
+            ps_settings = ps.settings
+#             box.prop(ps,'name')
+            box.prop(ps_settings,'type')
+            box.prop(ps_settings,'emit_from')
+            box.prop(ps_settings,'distribution')
+            row = box.row()
+            row.label("Number of Particles:")
+            row.prop(ps_settings,'count',text="")
+            row = box.row()
+            row.label("Hair Length:")            
+            row.prop(ps_settings,'hair_length',text="")
+            row = box.row()
+            row.label("Random Size:")            
+            row.prop(ps_settings,'size_random',text="",slider=True)              
+            row = box.row()
+            row.label("Material:")            
+            row.prop(ps_settings,'material_slot',text="")
+            row = box.row()
+            row.label("Rotation Mode:")            
+            row.prop(ps_settings,'rotation_mode',text="")      
+            row = box.row()
+            row.label("Rotation Factor:")            
+            row.prop(ps_settings,'rotation_factor_random',text="",slider=True)                 
+            row = box.row()
+            row.label("Render Type:")            
+            row.prop(ps_settings,'render_type',text="")
+                
+            if ps_settings.render_type == 'OBJECT':
+                row = box.row()
+                row.label("Object:")            
+                row.prop(ps_settings,'dupli_object',text="")    
+                row = box.row()          
+                row.prop(ps_settings,'use_global_dupli')
+                row.prop(ps_settings,'use_rotation_dupli')
+                row.prop(ps_settings,'use_scale_dupli')        
+                     
+            if ps_settings.render_type == 'GROUP':
+                row = box.row()
+                row.label("Group:")            
+                row.prop(ps_settings,'dupli_group',text="") 
+                row = box.row()          
+                row.prop(ps_settings,'use_global_dupli')
+                row.prop(ps_settings,'use_rotation_dupli')
+                row.prop(ps_settings,'use_scale_dupli')
+                row = box.row()   
+                row.prop(ps_settings,'use_whole_group')
+                row.prop(ps_settings,'use_group_pick_random')
+                row.prop(ps_settings,'use_group_count')
+                        
     if mod.type == 'ARRAY':
         draw_array_modifier(layout)
     elif mod.type == 'BEVEL':
@@ -566,6 +635,8 @@ def draw_modifier(mod,layout,obj):
         draw_triangulate_modifier(layout)
     elif mod.type == 'WIREFRAME':
         draw_wireframe_modifier(layout)
+    elif mod.type == 'PARTICLE_SYSTEM':
+        draw_particle_system(layout)
     else:
         row = layout.row()
         row.label(mod.name + " view ")

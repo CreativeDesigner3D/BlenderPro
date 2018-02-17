@@ -237,6 +237,7 @@ class VIEW3D_MT_tools(bpy.types.Menu):
             edit_mesh = True
             
         layout = self.layout
+        layout.menu("VIEW3D_MT_drawing_tools",icon='GREASEPENCIL')
         layout.menu("VIEW3D_MT_objecttools",icon='OBJECT_DATA')
         layout.menu("VIEW3D_MT_cursor_tools",icon='CURSOR')
         layout.menu("VIEW3D_MT_selectiontools",icon='MAN_TRANS')
@@ -352,12 +353,11 @@ class VIEW3D_MT_editmeshtools(bpy.types.Menu):
         layout.operator("mesh.duplicate_move",icon='PASTEDOWN')
         layout.operator("transform.vertex_random",icon='PASTEDOWN')
         layout.operator("mesh.normals_make_consistent",icon='PASTEDOWN')
-
-        layout.menu('VIEW3D_MT_edit_mesh_delete',icon='X')
+        layout.separator()
         layout.menu('VIEW3D_MT_edit_mesh_delete',icon='X')
         
 class VIEW3D_MT_mesh_selection(bpy.types.Menu):
-    bl_label = "Menu"
+    bl_label = "Mesh Selection"
 
     def draw(self, context):
         layout = self.layout
@@ -365,6 +365,16 @@ class VIEW3D_MT_mesh_selection(bpy.types.Menu):
         layout.operator("mesh.select_mode",text="Edge Select",icon='EDGESEL').type='EDGE'
         layout.operator("mesh.select_mode",text="Face Select",icon='FACESEL').type='FACE'
 
+class VIEW3D_MT_drawing_tools(bpy.types.Menu):
+    bl_context = "objectmode"
+    bl_label = "Drawing Tools"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator("view3d.draw_assembly", icon='MESH_CUBE',text="Draw Box") 
+        layout.operator("view3d.draw_plane", icon='MESH_PLANE',text="Draw Plane")   
+        layout.operator("view3d.draw_curve", icon='CURVE_DATA',text="Draw Lines")  
+        layout.operator("view3d.place_area_lamp", icon='LAMP_POINT',text="Draw Area Lamp")    
 
 class VIEW3D_PT_Standard_Objects(bpy.types.Panel):
     bl_label = "Standard Objects"
@@ -415,7 +425,8 @@ def register():
     bpy.utils.register_class(VIEW3D_MT_objecttools) 
     bpy.utils.register_class(VIEW3D_MT_editmeshtools) 
     bpy.utils.register_class(VIEW3D_MT_mesh_selection)  
-    bpy.utils.register_class(VIEW3D_PT_Standard_Objects)
+    bpy.utils.register_class(VIEW3D_MT_drawing_tools) 
+#     bpy.utils.register_class(VIEW3D_PT_Standard_Objects)
     
 def unregister():
     pass
