@@ -339,6 +339,7 @@ class VIEW3D_MT_editmeshtools(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        obj = context.object
         layout.operator("view3d.edit_mesh_extrude_move_normal",icon='CURVE_PATH')
         layout.operator("mesh.inset",icon='MOD_MESHDEFORM')
         layout.operator("mesh.knife_tool",icon='SCULPTMODE_HLT')
@@ -353,6 +354,7 @@ class VIEW3D_MT_editmeshtools(bpy.types.Menu):
         layout.operator("mesh.duplicate_move",icon='PASTEDOWN')
         layout.operator("transform.vertex_random",icon='PASTEDOWN')
         layout.operator("mesh.normals_make_consistent",icon='PASTEDOWN')
+        layout.operator("view3d.set_base_point",icon='SPACE2').object_name = obj.name 
         layout.separator()
         layout.menu('VIEW3D_MT_edit_mesh_delete',icon='X')
         

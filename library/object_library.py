@@ -98,12 +98,19 @@ class LIBRARY_OT_add_object_from_library(bpy.types.Operator):
         return True
 
     def check(self, context):
+        wm = context.window_manager
+        wm_props = wm.bp_lib
+        if self.object_category != "":
+            wm_props.object_category = self.object_category
         return True
 
     def invoke(self,context,event):
         clear_object_categories(self,context)
         update_object_category(self,context)
         wm = context.window_manager
+        wm_props = wm.bp_lib
+        if wm_props.object_category != "":
+            self.object_category = wm_props.object_category              
         return wm.invoke_props_dialog(self, width=200)
         
     def draw(self, context):
@@ -224,9 +231,14 @@ class LIBRARY_OT_save_object_to_library(bpy.types.Operator):
         
     def draw(self, context):
         layout = self.layout
+        path = os.path.join(get_library_path() ,self.object_category) 
+        files = os.listdir(path)
+
         layout.label("Select folder to save object to")
         layout.prop(self,'object_category',text="",icon='FILE_FOLDER')
         layout.label("Name: " + self.obj_name)
+        if self.obj_name + ".blend" in files or self.obj_name + ".png" in files:
+            layout.label("File already exists",icon="ERROR")        
         
     def create_object_thumbnail_script(self,source_dir,source_file,object_name):
         file = open(os.path.join(bpy.app.tempdir,"thumb_temp.py"),'w')

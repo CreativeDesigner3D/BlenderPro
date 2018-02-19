@@ -98,6 +98,10 @@ class LIBRARY_OT_add_group_from_library(bpy.types.Operator):
         return True
 
     def check(self, context):
+        wm = context.window_manager
+        wm_props = wm.bp_lib
+        if self.group_category != "":
+            wm_props.group_category = self.group_category
         return True
 
     def invoke(self,context,event):
@@ -105,6 +109,9 @@ class LIBRARY_OT_add_group_from_library(bpy.types.Operator):
         self.group_objects = []
         update_group_category(self,context)
         wm = context.window_manager
+        wm_props = wm.bp_lib
+        if wm_props.group_category != "":
+            self.group_category = wm_props.group_category
         return wm.invoke_props_dialog(self, width=200)
         
     def draw(self, context):
@@ -279,10 +286,14 @@ class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
         
     def draw(self, context):
         layout = self.layout
+        path = os.path.join(get_library_path() ,self.group_category) 
+        files = os.listdir(path)               
         layout.label("Select folder to save group to",icon='FILE_FOLDER')
         layout.prop(self,'group_category',text="",icon='FILE_FOLDER')
         layout.label("Name: " + self.grp_name)
-        
+        if self.grp_name + ".blend" in files or self.grp_name + ".png" in files:
+            layout.label("File already exists",icon="ERROR")  
+            
     def execute(self, context):
         
         grp_to_save = bpy.data.groups[context.scene.outliner.selected_group_index]

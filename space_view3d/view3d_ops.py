@@ -1144,6 +1144,30 @@ class OPS_snapping_options(bpy.types.Operator):
             elif snap_element == 'FACE':
                 layout.prop(toolsettings, "use_snap_project")
 
+class OPS_set_base_point(bpy.types.Operator):
+    bl_idname = "view3d.set_base_point"
+    bl_label = "Set Base Point"
+    bl_options = {'UNDO'}
+
+    object_name = bpy.props.StringProperty(name="Object Name")
+
+    def execute(self, context):
+        obj = bpy.data.objects[self.object_name]
+        cursor_x = context.scene.cursor_location[0]
+        cursor_y = context.scene.cursor_location[1]
+        cursor_z = context.scene.cursor_location[2]
+        bpy.ops.view3d.snap_cursor_to_selected()
+        if obj.mode == 'EDIT':
+            bpy.ops.object.editmode_toggle()
+            
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+        
+        context.scene.cursor_location = (cursor_x,cursor_y,cursor_z)
+        if obj.mode == 'OBJECT':
+            bpy.ops.object.editmode_toggle()
+            
+        return {'FINISHED'}    
+
 def register():
     bpy.utils.register_class(OPS_viewport_options)
     bpy.utils.register_class(OPS_change_shademode)
@@ -1157,6 +1181,7 @@ def register():
     bpy.utils.register_class(OPS_place_area_lamp)
     bpy.utils.register_class(OPS_set_cursor_location)
     bpy.utils.register_class(OPS_snapping_options)
+    bpy.utils.register_class(OPS_set_base_point)
     
 def unregister():
     pass

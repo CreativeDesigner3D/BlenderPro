@@ -959,18 +959,19 @@ class SCENE_PT_outliner(Panel):
             layout.template_list("FD_UL_scenes", "", bpy.data, "scenes", context.scene.outliner, "selected_scene_index", rows=4)
             unit = context.scene.unit_settings
             box = layout.box()
-            box.label("Scene Properties: " + context.scene.name)
+            box.label("Scene Properties: " + context.scene.name,icon='BUTS')
             split = box.split(percentage=0.35)
             split.label("Unit Type:")
             split.prop(unit, "system", text="")
             split = box.split(percentage=0.35)
             split.label("Angle:")
             split.prop(unit, "system_rotation", text="")
-
-            layout.operator("view3d.background_image_add", text="Add Image",icon='ZOOMIN')
+            img_box = layout.box()
+            img_box.label("Background Images:",icon='IMAGE_COL')
+            img_box.operator("view3d.background_image_add", text="Add Image",icon='ZOOMIN')
             view = context.space_data
             for i, bg in enumerate(view.background_images):
-                self.draw_scene_image(layout, view, bg, i)
+                self.draw_scene_image(img_box, view, bg, i)
             
     def draw_worlds(self,layout,context):
         scene = context.scene

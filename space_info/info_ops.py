@@ -67,6 +67,21 @@ class OPS_render_settings(bpy.types.Operator):
                 row = box.row()
                 row.prop(bpy.data.worlds[0], "horizon_color", text="Background Color")        
         
+class OPS_reload_blender_pro(bpy.types.Operator): 
+    bl_idname = "info.reload_blender_pro"
+    bl_label = "Reload Blender Pro"
+    bl_description = "Reloads Blender Pro Modules"
+    
+    def execute(self, context):
+        from .. import space_view3d
+#         from .. import space_info
+#         from .. import library
+
+        space_view3d.register()
+#         space_info.register()
+#         library.register()
+        return {'FINISHED'}        
+        
 class OPS_change_interface(bpy.types.Operator): 
     bl_idname = "info.change_interface"
     bl_label = "Change Interface"
@@ -129,8 +144,9 @@ class OPS_delete_current_interface(bpy.types.Operator):
         layout.label("Active Interface Layout: " + context.window.screen.name)
         
 def register():
-
+    
     bpy.utils.register_class(OPS_render_settings)
+    bpy.utils.register_class(OPS_reload_blender_pro)
     bpy.utils.register_class(OPS_change_interface)
     bpy.utils.register_class(OPS_duplicate_current_interface)
     bpy.utils.register_class(OPS_delete_current_interface)

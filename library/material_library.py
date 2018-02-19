@@ -96,11 +96,18 @@ class LIBRARY_OT_add_material_from_library(bpy.types.Operator):
         return True
 
     def check(self, context):
+        wm = context.window_manager
+        wm_props = wm.bp_lib
+        if self.material_category != "":
+            wm_props.material_category = self.material_category           
         return True
 
     def invoke(self,context,event):
         update_material_category(self,context)
         wm = context.window_manager
+        wm_props = wm.bp_lib
+        if wm_props.material_category != "":
+            self.material_category = wm_props.material_category        
         return wm.invoke_props_dialog(self, width=200)
         
     def draw(self, context):
@@ -308,13 +315,15 @@ class LIBRARY_OT_save_material_to_library(bpy.types.Operator):
         else:
             return False
 
-    def check(self, context):
+    def check(self, context):     
         return True
 
     def invoke(self,context,event):
         mat = bpy.data.materials[context.scene.outliner.selected_material_index]
         self.mat_name = mat.name
         clear_material_categories(self,context)
+        wm = context.window_manager
+
         wm = context.window_manager
         return wm.invoke_props_dialog(self, width=300)
         
@@ -389,9 +398,13 @@ class LIBRARY_OT_save_material_to_library(bpy.types.Operator):
         
     def draw(self, context):
         layout = self.layout
+        path = os.path.join(get_library_path() ,self.material_category) 
+        files = os.listdir(path)        
         layout.label("Select folder to save material to")
         layout.prop(self,'material_category',text="",icon='FILE_FOLDER')
         layout.label("Name: " + self.mat_name)
+        if self.mat_name + ".blend" in files or self.mat_name + ".png" in files:
+            layout.label("File already exists",icon="ERROR")           
         
     def execute(self, context):
         if bpy.data.filepath == "":

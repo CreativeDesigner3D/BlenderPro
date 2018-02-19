@@ -14,6 +14,7 @@ def update_library_paths_on_startup(scene=None):
         for elm in root.findall("LibraryPaths"):
             items = elm.getchildren()
             for item in items:
+                
                 if item.tag == 'Objects':
                     if os.path.exists(str(item.text)):
                         wm_props.object_library_path = item.text
@@ -30,34 +31,10 @@ def update_library_paths_on_startup(scene=None):
                     if os.path.exists(str(item.text)):
                         wm_props.group_library_path = item.text
                     else:
-                        wm_props.group_library_path = ""
-                        
-                        
+                        wm_props.group_library_path = "" 
+                                              
 def update_library_paths(self,context):
-    xml = BlenderProXML()
-    root = xml.create_tree()
-    paths = xml.add_element(root,'LibraryPaths')
-    
-    wm = context.window_manager
-    wm_props = wm.bp_lib
-    
-    if os.path.exists(wm_props.object_library_path):
-        xml.add_element_with_text(paths,'Objects',wm_props.object_library_path)
-    else:
-        xml.add_element_with_text(paths,'Objects',"")
-        
-    if os.path.exists(wm_props.material_library_path):
-        xml.add_element_with_text(paths,'Materials',wm_props.material_library_path)
-    else:
-        xml.add_element_with_text(paths,'Materials',"")
-        
-    if os.path.exists(wm_props.group_library_path):
-        xml.add_element_with_text(paths,'Groups',wm_props.group_library_path)
-    else:
-        xml.add_element_with_text(paths,'Groups',"")
-
-    xml.write(utils_library.get_library_path_file())
-
+    utils_library.write_xml_file()
 
 class PROPS_window_manager(bpy.types.PropertyGroup):
     object_library_path = bpy.props.StringProperty(name="Object Library Path",
@@ -75,7 +52,18 @@ class PROPS_window_manager(bpy.types.PropertyGroup):
                                                      subtype='DIR_PATH',
                                                      update=update_library_paths)        
 
-
+    object_category = bpy.props.StringProperty(name="Object Category",
+                                               default="",
+                                               update=update_library_paths)   
+        
+    group_category = bpy.props.StringProperty(name="Group Category",
+                                              default="",
+                                              update=update_library_paths)  
+    
+    material_category = bpy.props.StringProperty(name="Material Category",
+                                                 default="",
+                                                 update=update_library_paths)  
+                
 def register():
     bpy.app.handlers.load_post.append(update_library_paths_on_startup)
     

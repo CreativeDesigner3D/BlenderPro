@@ -1,5 +1,6 @@
 import bpy
 import os
+from ..bp_lib.xml import BlenderProXML
 
 LIBRARY_FOLDER = os.path.join(os.path.dirname(__file__),"data")
 LIBRARY_PATH_FILENAME = "blender_pro_paths.xml"
@@ -70,6 +71,31 @@ def get_image_enum_previews(path,key,force_reload=False):
     key.my_previews = enum_items
     key.my_previews_dir = path
     return key.my_previews
+
+def write_xml_file():
+    xml = BlenderProXML()
+    root = xml.create_tree()
+    paths = xml.add_element(root,'LibraryPaths')
+    
+    wm = bpy.context.window_manager
+    wm_props = wm.bp_lib
+    
+    if os.path.exists(wm_props.object_library_path):
+        xml.add_element_with_text(paths,'Objects',wm_props.object_library_path)
+    else:
+        xml.add_element_with_text(paths,'Objects',"")
+        
+    if os.path.exists(wm_props.material_library_path):
+        xml.add_element_with_text(paths,'Materials',wm_props.material_library_path)
+    else:
+        xml.add_element_with_text(paths,'Materials',"")
+        
+    if os.path.exists(wm_props.group_library_path):
+        xml.add_element_with_text(paths,'Groups',wm_props.group_library_path)
+    else:
+        xml.add_element_with_text(paths,'Groups',"")
+    
+    xml.write(get_library_path_file())
 
 def create_image_preview_collection():
     import bpy.utils.previews
