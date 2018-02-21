@@ -9,6 +9,216 @@ enum_object_tabs = [('INFO'," ","Show the Main Information"),
                     ('CONSTRAINTS',"","Show the constraints assigned to the object"),
                     ('MODIFIERS',"","Show the modifiers assigned to the object")]     
 
+def draw_texture(layout,tex):
+    layout.prop(tex,'type')
+    layout.separator()
+    
+    if tex.type == 'CLOUDS':
+        layout.row().prop(tex, "cloud_type", expand=True)
+        layout.label(text="Noise:")
+        layout.row().prop(tex, "noise_type", text="Type", expand=True)
+        layout.prop(tex, "noise_basis", text="Basis")
+
+        split = layout.split()
+
+        col = split.column()
+        col.prop(tex, "noise_scale", text="Size")
+        col.prop(tex, "noise_depth", text="Depth")
+
+        split.prop(tex, "nabla", text="Nabla")   
+           
+    if tex.type == 'WOOD':
+        layout.row().prop(tex, "noise_basis_2", expand=True)
+        layout.row().prop(tex, "wood_type", expand=True)
+
+        col = layout.column()
+        col.active = tex.wood_type in {'RINGNOISE', 'BANDNOISE'}
+        col.label(text="Noise:")
+        col.row().prop(tex, "noise_type", text="Type", expand=True)
+        layout.prop(tex, "noise_basis", text="Basis")
+
+        split = layout.split()
+        split.active = tex.wood_type in {'RINGNOISE', 'BANDNOISE'}
+
+        col = split.column()
+        col.prop(tex, "noise_scale", text="Size")
+        col.prop(tex, "turbulence")
+
+        split.prop(tex, "nabla")
+    
+    if tex.type == 'MARBLE':
+        layout.row().prop(tex, "marble_type", expand=True)
+        layout.row().prop(tex, "noise_basis_2", expand=True)
+        layout.label(text="Noise:")
+        layout.row().prop(tex, "noise_type", text="Type", expand=True)
+        layout.prop(tex, "noise_basis", text="Basis")
+
+        split = layout.split()
+
+        col = split.column()
+        col.prop(tex, "noise_scale", text="Size")
+        col.prop(tex, "noise_depth", text="Depth")
+
+        col = split.column()
+        col.prop(tex, "turbulence")
+        col.prop(tex, "nabla")  
+        
+    if tex.type == 'MAGIC':      
+        row = layout.row()
+        row.prop(tex, "noise_depth", text="Depth")
+        row.prop(tex, "turbulence")    
+        
+    if tex.type == 'BLEND':      
+        sub = layout.row()
+
+        sub.active = (tex.progression in {'LINEAR', 'QUADRATIC', 'EASING', 'RADIAL'})
+        sub.prop(tex, "use_flip_axis", expand=True)
+        
+    if tex.type == 'STUCCI': 
+        layout.row().prop(tex, "stucci_type", expand=True)
+        layout.label(text="Noise:")
+        layout.row().prop(tex, "noise_type", text="Type", expand=True)
+        layout.prop(tex, "noise_basis", text="Basis")
+
+        row = layout.row()
+        row.prop(tex, "noise_scale", text="Size")
+        row.prop(tex, "turbulence")
+        
+    if tex.type == 'IMAGE':
+        layout.template_image(tex, "image", tex.image_user)
+        
+    if tex.type == 'MUSGRAVE':
+        layout.prop(tex, "musgrave_type")
+
+        split = layout.split()
+
+        col = split.column()
+        col.prop(tex, "dimension_max", text="Dimension")
+        col.prop(tex, "lacunarity")
+        col.prop(tex, "octaves")
+
+        musgrave_type = tex.musgrave_type
+        col = split.column()
+        if musgrave_type in {'HETERO_TERRAIN', 'RIDGED_MULTIFRACTAL', 'HYBRID_MULTIFRACTAL'}:
+            col.prop(tex, "offset")
+        col.prop(tex, "noise_intensity", text="Intensity")
+        if musgrave_type in {'RIDGED_MULTIFRACTAL', 'HYBRID_MULTIFRACTAL'}:
+            col.prop(tex, "gain")
+
+        layout.label(text="Noise:")
+
+        layout.prop(tex, "noise_basis", text="Basis")
+
+        row = layout.row()
+        row.prop(tex, "noise_scale", text="Size")
+        row.prop(tex, "nabla")
+    
+    if tex.type == 'VORONOI':
+        split = layout.split()
+
+        col = split.column()
+        col.label(text="Distance Metric:")
+        col.prop(tex, "distance_metric", text="")
+        sub = col.column()
+        sub.active = tex.distance_metric == 'MINKOVSKY'
+        sub.prop(tex, "minkovsky_exponent", text="Exponent")
+        col.label(text="Coloring:")
+        col.prop(tex, "color_mode", text="")
+        col.prop(tex, "noise_intensity", text="Intensity")
+
+        col = split.column()
+        sub = col.column(align=True)
+        sub.label(text="Feature Weights:")
+        sub.prop(tex, "weight_1", text="1", slider=True)
+        sub.prop(tex, "weight_2", text="2", slider=True)
+        sub.prop(tex, "weight_3", text="3", slider=True)
+        sub.prop(tex, "weight_4", text="4", slider=True)
+
+        layout.label(text="Noise:")
+        row = layout.row()
+        row.prop(tex, "noise_scale", text="Size")
+        row.prop(tex, "nabla")
+        
+    if tex.type == 'DISTORTED_NOISE':
+        layout.prop(tex, "noise_distortion")
+        layout.prop(tex, "noise_basis", text="Basis")
+
+        split = layout.split()
+
+        col = split.column()
+        col.prop(tex, "distortion", text="Distortion")
+        col.prop(tex, "noise_scale", text="Size")
+
+        split.prop(tex, "nabla")
+    
+    if tex.type == 'POINT_DENSITY':
+        pd = tex.point_density
+
+        layout.row().prop(pd, "point_source", expand=True)
+
+        split = layout.split()
+
+        col = split.column()
+        if pd.point_source == 'PARTICLE_SYSTEM':
+            col.label(text="Object:")
+            col.prop(pd, "object", text="")
+
+            sub = col.column()
+            sub.enabled = bool(pd.object)
+            if pd.object:
+                sub.label(text="System:")
+                sub.prop_search(pd, "particle_system", pd.object, "particle_systems", text="")
+            sub.label(text="Cache:")
+            sub.prop(pd, "particle_cache_space", text="")
+        else:
+            col.label(text="Object:")
+            col.prop(pd, "object", text="")
+            col.label(text="Cache:")
+            col.prop(pd, "vertex_cache_space", text="")
+
+        col.separator()
+
+        col.label(text="Color Source:")
+        if pd.point_source == 'PARTICLE_SYSTEM':
+            col.prop(pd, "particle_color_source", text="")
+            if pd.particle_color_source in {'PARTICLE_SPEED', 'PARTICLE_VELOCITY'}:
+                col.prop(pd, "speed_scale")
+            if pd.particle_color_source in {'PARTICLE_SPEED', 'PARTICLE_AGE'}:
+                layout.template_color_ramp(pd, "color_ramp", expand=True)
+        else:
+            col.prop(pd, "vertex_color_source", text="")
+            if pd.vertex_color_source == 'VERTEX_COLOR':
+                if pd.object and pd.object.data:
+                    col.prop_search(pd, "vertex_attribute_name", pd.object.data, "vertex_colors", text="")
+            if pd.vertex_color_source == 'VERTEX_WEIGHT':
+                if pd.object:
+                    col.prop_search(pd, "vertex_attribute_name", pd.object, "vertex_groups", text="")
+                layout.template_color_ramp(pd, "color_ramp", expand=True)
+
+        col = split.column()
+        col.label()
+        col.prop(pd, "radius")
+        col.label(text="Falloff:")
+        col.prop(pd, "falloff", text="")
+        if pd.falloff == 'SOFT':
+            col.prop(pd, "falloff_soft")
+        if pd.falloff == 'PARTICLE_VELOCITY':
+            col.prop(pd, "falloff_speed_scale")
+
+        col.prop(pd, "use_falloff_curve")
+
+        if pd.use_falloff_curve:
+            col = layout.column()
+            col.label(text="Falloff Curve")
+            col.template_curve_mapping(pd, "falloff_curve", brush=False)
+            
+    if tex.type == 'OCEAN':
+        ot = tex.ocean
+
+        col = layout.column()
+        col.prop(ot, "ocean_object")
+        col.prop(ot, "output")
+                
 def draw_modifier(mod,layout,obj):
     
     def draw_show_expanded(mod,layout):
@@ -536,6 +746,54 @@ def draw_modifier(mod,layout,obj):
     
             col.prop(mod, "material_offset", text="Material Offset")                            
     
+    def draw_displace_modifier(layout):
+        col = layout.column(align=True)
+        box = col.box()
+        row = box.row()
+        draw_show_expanded(mod,row)
+        row.prop(mod,'name',text="",icon='MOD_WIREFRAME')
+        draw_apply_close(row)
+        if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
+            box = col.box()    
+            
+            has_texture = (mod.texture is not None)
+            tex = mod.texture
+            
+            col = box.column(align=True)
+            col.label(text="Texture:")
+            col.template_ID(mod, "texture", new="texture.new")
+    
+            if has_texture:
+                col.separator()
+                draw_texture(col,mod.texture)
+    
+            split = box.split()
+    
+            col = split.column(align=True)
+            col.label(text="Direction:")
+            col.prop(mod, "direction", text="")
+            col.label(text="Vertex Group:")
+            col.prop_search(mod, "vertex_group", obj, "vertex_groups", text="")
+    
+            col = split.column(align=True)
+            col.active = has_texture
+            col.label(text="Texture Coordinates:")
+            col.prop(mod, "texture_coords", text="")
+            if mod.texture_coords == 'OBJECT':
+                col.label(text="Object:")
+                col.prop(mod, "texture_coords_object", text="")
+            elif mod.texture_coords == 'UV' and obj.type == 'MESH':
+                col.label(text="UV Map:")
+                col.prop_search(mod, "uv_layer", obj.data, "uv_textures", text="")
+    
+            box.separator()
+    
+            row = box.row()
+            row.prop(mod, "mid_level")
+            row.prop(mod, "strength")            
+    
     def draw_particle_system(layout):
         col = layout.column(align=True)
         box = col.box()
@@ -635,6 +893,8 @@ def draw_modifier(mod,layout,obj):
         draw_triangulate_modifier(layout)
     elif mod.type == 'WIREFRAME':
         draw_wireframe_modifier(layout)
+    elif mod.type == 'DISPLACE':
+        draw_displace_modifier(layout)        
     elif mod.type == 'PARTICLE_SYSTEM':
         draw_particle_system(layout)
     else:
@@ -972,31 +1232,36 @@ def draw_vertex_groups(layout,obj,context):
         rows = 4
     
     box = layout.box()
-    box.label("Vertex Groups:",icon='GROUP_VERTEX')
     row = box.row()
-    row.template_list("MESH_UL_vgroups", "", ob, "vertex_groups", ob.vertex_groups, "active_index", rows=rows)
-
-    col = row.column(align=True)
-    col.operator("object.vertex_group_add", icon='ZOOMIN', text="")
-    col.operator("object.vertex_group_remove", icon='ZOOMOUT', text="").all = False
-    col.menu("MESH_MT_vertex_group_specials", icon='DOWNARROW_HLT', text="")
-    if group:
-        col.separator()
-        col.operator("object.vertex_group_move", icon='TRIA_UP', text="").direction = 'UP'
-        col.operator("object.vertex_group_move", icon='TRIA_DOWN', text="").direction = 'DOWN'
-
-    if ob.vertex_groups and (ob.mode == 'EDIT' or (ob.mode == 'WEIGHT_PAINT' and ob.type == 'MESH' and ob.data.use_paint_mask_vertex)):
+    row.label("Vertex Groups:",icon='GROUP_VERTEX')
+    if len(obj.vertex_groups) > 0:
+        pass
         row = box.row()
-
-        sub = row.row(align=True)
-        sub.operator("object.vertex_group_assign", text="Assign")
-        sub.operator("object.vertex_group_remove_from", text="Remove")
-
-        sub = row.row(align=True)
-        sub.operator("object.vertex_group_select", text="Select")
-        sub.operator("object.vertex_group_deselect", text="Deselect")
-
-        box.prop(context.tool_settings, "vertex_group_weight", text="Weight")    
+        row.template_list("MESH_UL_vgroups", "", ob, "vertex_groups", ob.vertex_groups, "active_index", rows=rows)
+    
+        col = row.column(align=True)
+        col.operator("object.vertex_group_add", icon='ZOOMIN', text="")
+        col.operator("object.vertex_group_remove", icon='ZOOMOUT', text="").all = False
+        col.menu("MESH_MT_vertex_group_specials", icon='DOWNARROW_HLT', text="")
+        if group:
+            col.separator()
+            col.operator("object.vertex_group_move", icon='TRIA_UP', text="").direction = 'UP'
+            col.operator("object.vertex_group_move", icon='TRIA_DOWN', text="").direction = 'DOWN'
+    
+        if ob.vertex_groups and (ob.mode == 'EDIT' or (ob.mode == 'WEIGHT_PAINT' and ob.type == 'MESH' and ob.data.use_paint_mask_vertex)):
+            row = box.row()
+    
+            sub = row.row(align=True)
+            sub.operator("object.vertex_group_assign", text="Assign")
+            sub.operator("object.vertex_group_remove_from", text="Remove")
+    
+            sub = row.row(align=True)
+            sub.operator("object.vertex_group_select", text="Select")
+            sub.operator("object.vertex_group_deselect", text="Deselect")
+    
+            box.prop(context.tool_settings, "vertex_group_weight", text="Weight")   
+    else:
+         row.operator('object.vertex_group_add',icon='ZOOMIN',text="Add")
     
 def draw_shape_keys(layout,obj,context):
     ob = context.object
@@ -1011,89 +1276,98 @@ def draw_shape_keys(layout,obj,context):
             enable_edit_value = True
             
     box = layout.box()
-    box.label("Shape Keys",icon='SHAPEKEY_DATA')
     row = box.row()
-
-    rows = 2
-    if kb:
-        rows = 4
-    row.template_list("MESH_UL_shape_keys", "", key, "key_blocks", ob, "active_shape_key_index", rows=rows)
-
-    col = row.column()
-
-    sub = col.column(align=True)
-    sub.operator("object.shape_key_add", icon='ZOOMIN', text="").from_mix = False
-    sub.operator("object.shape_key_remove", icon='ZOOMOUT', text="").all = False
-    sub.menu("MESH_MT_shape_key_specials", icon='DOWNARROW_HLT', text="")
-
-    if kb:
-        col.separator()
-
+    row.label("Shape Keys",icon='SHAPEKEY_DATA')
+    
+    if key and len(key.key_blocks) > 0:
+        row = box.row()
+        rows = 2
+        if kb:
+            rows = 4
+        row.template_list("MESH_UL_shape_keys", "", key, "key_blocks", ob, "active_shape_key_index", rows=rows)
+    
+        col = row.column()
+    
         sub = col.column(align=True)
-        sub.operator("object.shape_key_move", icon='TRIA_UP', text="").type = 'UP'
-        sub.operator("object.shape_key_move", icon='TRIA_DOWN', text="").type = 'DOWN'
-
-        split = box.split(percentage=0.4)
-        row = split.row()
-        row.enabled = enable_edit
-        row.prop(key, "use_relative")
-
-        row = split.row()
-        row.alignment = 'RIGHT'
-
-        sub = row.row(align=True)
-        sub.label()  # XXX, for alignment only
-        subsub = sub.row(align=True)
-        subsub.active = enable_edit_value
-        subsub.prop(ob, "show_only_shape_key", text="")
-        sub.prop(ob, "use_shape_key_edit_mode", text="")
-
-        sub = row.row()
-        if key.use_relative:
-            sub.operator("object.shape_key_clear", icon='X', text="")
-        else:
-            sub.operator("object.shape_key_retime", icon='RECOVER_LAST', text="")
-
-        if key.use_relative:
-            if ob.active_shape_key_index != 0:
-                row = box.row()
+        sub.operator("object.shape_key_add", icon='ZOOMIN', text="").from_mix = False
+        sub.operator("object.shape_key_remove", icon='ZOOMOUT', text="").all = False
+        sub.menu("MESH_MT_shape_key_specials", icon='DOWNARROW_HLT', text="")
+    
+        if kb:
+            col.separator()
+    
+            sub = col.column(align=True)
+            sub.operator("object.shape_key_move", icon='TRIA_UP', text="").type = 'UP'
+            sub.operator("object.shape_key_move", icon='TRIA_DOWN', text="").type = 'DOWN'
+    
+            split = box.split(percentage=0.4)
+            row = split.row()
+            row.enabled = enable_edit
+            row.prop(key, "use_relative")
+    
+            row = split.row()
+            row.alignment = 'RIGHT'
+    
+            sub = row.row(align=True)
+            sub.label()  # XXX, for alignment only
+            subsub = sub.row(align=True)
+            subsub.active = enable_edit_value
+            subsub.prop(ob, "show_only_shape_key", text="")
+            sub.prop(ob, "use_shape_key_edit_mode", text="")
+    
+            sub = row.row()
+            if key.use_relative:
+                sub.operator("object.shape_key_clear", icon='X', text="")
+            else:
+                sub.operator("object.shape_key_retime", icon='RECOVER_LAST', text="")
+    
+            if key.use_relative:
+                if ob.active_shape_key_index != 0:
+                    row = box.row()
+                    row.active = enable_edit_value
+                    row.prop(kb, "value")
+    
+                    split = box.split()
+    
+                    col = split.column(align=True)
+                    col.active = enable_edit_value
+                    col.label(text="Range:")
+                    col.prop(kb, "slider_min", text="Min")
+                    col.prop(kb, "slider_max", text="Max")
+    
+                    col = split.column(align=True)
+                    col.active = enable_edit_value
+                    col.label(text="Blend:")
+                    col.prop_search(kb, "vertex_group", ob, "vertex_groups", text="")
+                    col.prop_search(kb, "relative_key", key, "key_blocks", text="")
+    
+            else:
+                box.prop(kb, "interpolation")
+                row = box.column()
                 row.active = enable_edit_value
-                row.prop(kb, "value")
-
-                split = box.split()
-
-                col = split.column(align=True)
-                col.active = enable_edit_value
-                col.label(text="Range:")
-                col.prop(kb, "slider_min", text="Min")
-                col.prop(kb, "slider_max", text="Max")
-
-                col = split.column(align=True)
-                col.active = enable_edit_value
-                col.label(text="Blend:")
-                col.prop_search(kb, "vertex_group", ob, "vertex_groups", text="")
-                col.prop_search(kb, "relative_key", key, "key_blocks", text="")
-
-        else:
-            box.prop(kb, "interpolation")
-            row = box.column()
-            row.active = enable_edit_value
-            row.prop(key, "eval_time")
+                row.prop(key, "eval_time")
+    else:
+        row.operator("object.shape_key_add", icon='ZOOMIN', text="Add Shape ").from_mix = False
     
 def draw_uv_maps(layout,obj,context):
     me = obj.data
     box = layout.box()
-    box.label("UV Maps",icon='GROUP_UVS')
-    
     row = box.row()
-    col = row.column()
-
-    col.template_list("MESH_UL_uvmaps_vcols", "uvmaps", me, "uv_textures", me.uv_textures, "active_index", rows=1)
-
-    col = row.column(align=True)
-    col.operator("mesh.uv_texture_add", icon='ZOOMIN', text="")
-    col.operator("mesh.uv_texture_remove", icon='ZOOMOUT', text="")    
+    row.label("UV Maps",icon='GROUP_UVS')
     
+    
+    if len(me.uv_textures) > 0:
+        row = box.row()
+        col = row.column()
+    
+        col.template_list("MESH_UL_uvmaps_vcols", "uvmaps", me, "uv_textures", me.uv_textures, "active_index", rows=1)
+    
+        col = row.column(align=True)
+        col.operator("mesh.uv_texture_add", icon='ZOOMIN', text="")
+        col.operator("mesh.uv_texture_remove", icon='ZOOMOUT', text="")    
+    else:
+        row.operator('uv.smart_project',icon='ZOOMIN',text="Unwrap Mesh")
+        
 def draw_empty_properties(layout,obj,context):
     layout.label('Empty Properties:',icon='OUTLINER_OB_EMPTY')
     layout.prop(obj,'empty_draw_type',text='Draw Type')
@@ -1340,8 +1614,8 @@ def draw_object_tabs(layout,obj):
     layout.prop_enum(props, "tabs", 'INFO',icon="INFO", text="Main") 
     if obj.type in {'MESH','CURVE','FONT'}:
         layout.prop_enum(props, "tabs", 'MATERIAL', icon="MATERIAL", text="Materials") 
-        layout.prop_enum(props, "tabs", 'CONSTRAINTS', icon="CONSTRAINT", text="Constraints") 
         layout.prop_enum(props, "tabs", 'MODIFIERS', icon="MODIFIER", text="Modifiers") 
+        layout.prop_enum(props, "tabs", 'CONSTRAINTS', icon="CONSTRAINT", text="Constraints")
     if obj.type in {'EMPTY','LAMP','CAMERA'}:
         layout.prop_enum(props, "tabs", 'CONSTRAINTS', icon='CONSTRAINT', text="Constraints") 
 
