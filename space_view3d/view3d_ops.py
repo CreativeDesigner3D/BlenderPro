@@ -1168,6 +1168,24 @@ class OPS_set_base_point(bpy.types.Operator):
             
         return {'FINISHED'}    
 
+class OPS_create_group_instance(bpy.types.Operator):
+    bl_idname = "view3d.create_group_instance"
+    bl_label = "Create Group Instance"
+    bl_options = {'UNDO'}
+
+    group_name = bpy.props.StringProperty(name="Object Name")
+
+    def execute(self, context):
+        grp = bpy.data.groups[self.group_name]
+        obj = bpy.data.objects.new(self.group_name,None)
+        context.scene.objects.link(obj)
+        obj.dupli_type = 'GROUP'
+        obj.dupli_group = grp
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select = True
+        context.scene.objects.active = obj
+        return {'FINISHED'}
+
 def register():
     bpy.utils.register_class(OPS_viewport_options)
     bpy.utils.register_class(OPS_change_shademode)
@@ -1182,6 +1200,7 @@ def register():
     bpy.utils.register_class(OPS_set_cursor_location)
     bpy.utils.register_class(OPS_snapping_options)
     bpy.utils.register_class(OPS_set_base_point)
+    bpy.utils.register_class(OPS_create_group_instance)
     
 def unregister():
     pass

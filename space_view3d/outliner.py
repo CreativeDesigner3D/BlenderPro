@@ -1039,10 +1039,13 @@ class SCENE_PT_outliner(Panel):
                 box = layout.box()
                 group = bpy.data.groups[scene.outliner.selected_group_index]
                 
-                box.label("Group Properties: " + group.name)
                 row = box.row()
+                row.label("Group Properties: " + group.name)
+                row.operator('view3d.create_group_instance',text='Copy',icon="ZOOMIN").group_name = group.name
+                row = box.row()
+                
                 row.operator_context = 'EXEC_REGION_WIN'                
-                row.operator('object.group_link',text="Add Selected to Group",icon='ZOOMIN').group = group.name                
+                row.operator('object.group_link',text="Add Selected Object to Group",icon='OBJECT_DATA').group = group.name                
                 box.prop(group,'name')
                 box.template_list("FD_UL_objects", "", group, "objects", scene.outliner, "selected_group_object_index", rows=4)  
 

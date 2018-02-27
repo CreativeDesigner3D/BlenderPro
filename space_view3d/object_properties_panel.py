@@ -1219,9 +1219,10 @@ def draw_constraint(con,layout,obj):
 def draw_mesh_properties(layout,obj,context):
     layout.label('Mesh Properties:',icon='OUTLINER_OB_MESH')
     layout.prop(obj,'draw_type',text="Draw Type")
+    draw_uv_maps(layout,obj,context)
     draw_vertex_groups(layout, obj, context)
     draw_shape_keys(layout,obj,context)
-    draw_uv_maps(layout,obj,context)
+    
     
 def draw_vertex_groups(layout,obj,context):
     ob = context.object
