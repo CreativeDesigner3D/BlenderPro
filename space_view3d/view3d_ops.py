@@ -30,23 +30,29 @@ class OPS_viewport_options(bpy.types.Operator):
         layout = self.layout
         view = context.space_data
 
-        camera_box = layout.box()
-        camera_box.label("Viewport Options",icon='SCENE')
-        camera_box.prop(context.space_data,"lens",text="Viewport Lens Angle")
-        row = camera_box.row()
-        row.prop(context.space_data,"clip_start",text="Viewport Clipping Start")
-        row.prop(context.space_data,"clip_end",text="Viewport Clipping End")
+        view_box = layout.box()
+        view_box.label("Viewport Options",icon='SCENE')
+        row = view_box.row()
+        row.label("Viewport Lens Angle:")
+        row.prop(context.space_data,"lens",text="")
+        row = view_box.row(align=True)
+        row.label("Clipping Distance:")
+        row.prop(context.space_data,"clip_start",text="Start")
+        row.prop(context.space_data,"clip_end",text="End")
         layout.separator()
-        camera_box.prop(context.space_data,"lock_camera",text="Lock Camera to View")
+        view_box.prop(context.space_data,"lock_camera",text="Lock Camera to View")
 
-        col = camera_box.column()
+        col = view_box.column()
         col.prop(view, "show_only_render")
         col.prop(view, "show_world")
 
-        col = camera_box.column()
-        col.prop(view, "show_outline_selected")
-        col.prop(view, "show_all_objects_origin")
-        col.prop(view, "show_relationship_lines")
+        col = view_box.column()
+        row = col.row()
+        row.prop(view, "show_outline_selected")
+        row.prop(view, "show_all_objects_origin")
+        row = col.row()
+        row.prop(view, "show_relationship_lines")
+        row.prop(view, "show_backface_culling")
 
         grid_box = layout.box()
         grid_box.label("Grid Options",icon='GRID')
@@ -66,6 +72,7 @@ class OPS_viewport_options(bpy.types.Operator):
         subsub.active = view.show_floor
         subsub.prop(view, "grid_lines", text="Lines")
         sub.prop(view, "grid_scale", text="Scale")
+        sub.prop(view, "grid_subdivisions",text="Subdivisions")
 
 class OPS_change_shademode(bpy.types.Operator):
     bl_idname = "view3d.change_shademode"
@@ -1186,6 +1193,29 @@ class OPS_create_group_instance(bpy.types.Operator):
         context.scene.objects.active = obj
         return {'FINISHED'}
 
+class OPS_open_texture_editor(bpy.types.Operator):
+    bl_idname = "object_props.open_texture_editor"
+    bl_label = "Open Texture Editor"
+
+    @classmethod
+    def poll(cls, context):
+        if context.object and context.object.type == 'MESH':
+            return True
+        else:
+            return False
+        
+    def execute(self, context):
+        if context.object.mode == 'OBJECT':
+            bpy.ops.object.editmode_toggle()
+            
+        bpy.ops.mesh.select_all(action='SELECT')
+        
+        bpy.ops.screen.userpref_show('INVOKE_DEFAULT')
+        for window in context.window_manager.windows:
+            if len(window.screen.areas) == 1 and window.screen.areas[0].type == 'USER_PREFERENCES':
+                window.screen.areas[0].type = 'IMAGE_EDITOR'
+        return {'FINISHED'} 
+
 def register():
     bpy.utils.register_class(OPS_viewport_options)
     bpy.utils.register_class(OPS_change_shademode)
@@ -1201,6 +1231,7 @@ def register():
     bpy.utils.register_class(OPS_snapping_options)
     bpy.utils.register_class(OPS_set_base_point)
     bpy.utils.register_class(OPS_create_group_instance)
+    bpy.utils.register_class(OPS_open_texture_editor)
     
 def unregister():
     pass

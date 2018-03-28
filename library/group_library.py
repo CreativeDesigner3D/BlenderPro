@@ -233,7 +233,7 @@ class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
     def check(self, context):
         return True
 
-    def create_object_thumbnail_script(self,source_dir,source_file,group_name):
+    def create_group_thumbnail_script(self,source_dir,source_file,group_name):
         file = open(os.path.join(bpy.app.tempdir,"thumb_temp.py"),'w')
         file.write("import bpy\n")
         file.write("with bpy.data.libraries.load(r'" + source_file + "', False, True) as (data_from, data_to):\n")
@@ -254,7 +254,7 @@ class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
         file.close()
         return os.path.join(bpy.app.tempdir,'thumb_temp.py')
         
-    def create_object_save_script(self,source_dir,source_file,group_name):
+    def create_group_save_script(self,source_dir,source_file,group_name):
         file = open(os.path.join(bpy.app.tempdir,"save_temp.py"),'w')
         file.write("import bpy\n")
         file.write("import os\n")
@@ -299,16 +299,19 @@ class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
         grp_to_save = bpy.data.groups[context.scene.outliner.selected_group_index]
         directory_to_save_to = os.path.join(get_library_path() ,self.group_category) 
         
-        thumbnail_script_path = self.create_object_thumbnail_script(directory_to_save_to, bpy.data.filepath, grp_to_save.name)
-        save_script_path = self.create_object_save_script(directory_to_save_to, bpy.data.filepath, grp_to_save.name)
+        thumbnail_script_path = self.create_group_thumbnail_script(directory_to_save_to, bpy.data.filepath, grp_to_save.name)
+        save_script_path = self.create_group_save_script(directory_to_save_to, bpy.data.filepath, grp_to_save.name)
 
-#         subprocess.Popen(r'explorer ' + bpy.app.tempdir)
+        if not os.path.exists(bpy.app.tempdir):
+            os.makedirs(bpy.app.tempdir)
+
+        subprocess.Popen(r'explorer ' + bpy.app.tempdir)
         
         subprocess.call(bpy.app.binary_path + ' "' + utils_library.get_thumbnail_file_path() + '" -b --python "' + thumbnail_script_path + '"')   
         subprocess.call(bpy.app.binary_path + ' -b --python "' + save_script_path + '"')
         
         os.remove(thumbnail_script_path)
-        os.remove(save_script_path)        
+#         os.remove(save_script_path)        
         
         return {'FINISHED'}    
     

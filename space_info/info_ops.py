@@ -54,17 +54,29 @@ class OPS_render_settings(bpy.types.Operator):
         row.prop(rd,"display_mode",text="")
         row = box.row()
         row.label(text="Use Transparent Film:",icon='SEQUENCE')
-        row.prop(scene.cycles,"film_transparent",text='')
+        row.prop(scene.cycles,"film_transparent",text=" ")
 
         row = box.row()
-        row.prop(rd, "use_freestyle", text="Use Freestyle")       
+        row.label(text="Use Freestyle:",icon='ANTIALIASED')
+        row.prop(rd, "use_freestyle", text=" ")       
         if rd.use_freestyle: 
+            row = box.row()
+            row.label("",icon='BLANK1')
+            row.label(text="Line Mode:")
+            row.prop(rd, "line_thickness_mode", expand=True)
+            if (rd.line_thickness_mode == 'ABSOLUTE'):
+                row = box.row()
+                row.label("",icon='BLANK1')
+                row.label("Thickness:")
+                row.prop(rd, "line_thickness")            
             rl = rd.layers.active
             if len(rl.freestyle_settings.linesets) > 0:
                 linestyle = rl.freestyle_settings.linesets[0].linestyle            
                 row = box.row()
+                row.label("",icon='BLANK1')
                 row.prop(linestyle, "color", text="Line Color")
                 row = box.row()
+                row.label("",icon='BLANK1')
                 row.prop(bpy.data.worlds[0], "horizon_color", text="Background Color")        
         
 class OPS_reload_blender_pro(bpy.types.Operator): 

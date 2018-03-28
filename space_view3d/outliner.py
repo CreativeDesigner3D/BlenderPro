@@ -136,10 +136,12 @@ def update_scene_selection(self,context):
         context.screen.scene.outliner.selected_scene_index = self.selected_scene_index
     
 def update_group_selection(self,context):
-    if self.selected_group_index + 1 >= len(bpy.data.groups):
+    if self.selected_group_index + 1 <= len(bpy.data.groups):
         group = bpy.data.groups[self.selected_group_index]
         bpy.ops.object.select_all(action = 'DESELECT')
+        print('GROUP',group)
         for obj in group.objects:
+            print('OBJ',obj)
             obj.select = True
             
 def update_group_object_selection(self,context):

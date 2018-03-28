@@ -759,15 +759,17 @@ def draw_modifier(mod,layout,obj):
             box = col.box()    
             
             has_texture = (mod.texture is not None)
-            tex = mod.texture
-            
+
             col = box.column(align=True)
-            col.label(text="Texture:")
-            col.template_ID(mod, "texture", new="texture.new")
+            
+            texbox = col.box()
+            texbox.label(text="Texture Info:")
+            texbox.template_ID(mod, "texture", new="texture.new")
     
             if has_texture:
                 col.separator()
-                draw_texture(col,mod.texture)
+                
+                draw_texture(texbox,mod.texture)
     
             split = box.split()
     
@@ -822,9 +824,17 @@ def draw_modifier(mod,layout,obj):
             row = box.row()
             row.label("Number of Particles:")
             row.prop(ps_settings,'count',text="")
+            row = box.row(align=True)
+            row.label("Child Particles:")
+            row.prop(ps_settings,'child_nbr',text="Display")            
+            row.prop(ps_settings,'rendered_child_count',text="Child")
             row = box.row()
             row.label("Hair Length:")            
             row.prop(ps_settings,'hair_length',text="")
+            row = box.row()
+            row.label("Hair Length:")            
+            row.prop(ps_settings,'normal_factor',text="")            
+            
             row = box.row()
             row.label("Random Size:")            
             row.prop(ps_settings,'size_random',text="",slider=True)              
@@ -1356,8 +1366,13 @@ def draw_uv_maps(layout,obj,context):
     row = box.row()
     row.label("UV Maps",icon='GROUP_UVS')
     
-    
+
+                            
     if len(me.uv_textures) > 0:
+        row.operator('object_props.open_texture_editor',
+                        text="Show UV Map",
+                        icon='IMAGE_COL')    
+                                    
         row = box.row()
         col = row.column()
     
@@ -1797,10 +1812,6 @@ def draw_object_materials(layout,obj,context):
         layout.operator('object_props.open_new_window',
                         text="Open Material Editor",
                         icon='NODETREE').space_type = 'NODE_EDITOR' 
-    if obj.mode == 'EDIT':    
-        layout.operator('object_props.open_new_window',
-                        text="Open Texture Editor",
-                        icon='IMAGE_COL').space_type = 'IMAGE_EDITOR'       
 
 class PANEL_object_properties(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
