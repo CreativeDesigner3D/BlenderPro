@@ -850,7 +850,7 @@ def draw_modifier(mod,layout,obj):
             row = box.row()
             row.label("Render Type:")            
             row.prop(ps_settings,'render_type',text="")
-                
+            
             if ps_settings.render_type == 'OBJECT':
                 row = box.row()
                 row.label("Object:")            
@@ -872,6 +872,103 @@ def draw_modifier(mod,layout,obj):
                 row.prop(ps_settings,'use_whole_group')
                 row.prop(ps_settings,'use_group_pick_random')
                 row.prop(ps_settings,'use_group_count')
+                        
+    def draw_ocean_modifier(layout):
+        col = layout.column(align=True)
+        box = col.box()
+        row = box.row()
+        draw_show_expanded(mod,row)
+        row.prop(mod,'name',text="",icon='MOD_SIMPLEDEFORM')
+        draw_apply_close(row)
+        if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
+            box = col.box()    
+            if not bpy.app.build_options.mod_oceansim:
+                box.label("Built without OceanSim modifier")
+                return
+    
+            box.prop(mod, "geometry_mode")
+    
+            if mod.geometry_mode == 'GENERATE':
+                row = box.row()
+                row.prop(mod, "repeat_x")
+                row.prop(mod, "repeat_y")
+    
+            box.separator()
+    
+            split = box.split()
+    
+            col = split.column()
+            col.prop(mod, "time")
+            col.prop(mod, "depth")
+            col.prop(mod, "random_seed")
+    
+            col = split.column()
+            col.prop(mod, "resolution")
+            col.prop(mod, "size")
+            col.prop(mod, "spatial_size")
+    
+            box.label("Waves:")
+    
+            split = box.split()
+    
+            col = split.column()
+            col.prop(mod, "choppiness")
+            col.prop(mod, "wave_scale", text="Scale")
+            col.prop(mod, "wave_scale_min")
+            col.prop(mod, "wind_velocity")
+    
+            col = split.column()
+            col.prop(mod, "wave_alignment", text="Alignment")
+            sub = col.column()
+            sub.active = (mod.wave_alignment > 0.0)
+            sub.prop(mod, "wave_direction", text="Direction")
+            sub.prop(mod, "damping")
+    
+            box.separator()
+    
+            box.prop(mod, "use_normals")
+    
+            split = box.split()
+    
+            col = split.column()
+            col.prop(mod, "use_foam")
+            sub = col.row()
+            sub.active = mod.use_foam
+            sub.prop(mod, "foam_coverage", text="Coverage")
+    
+            col = split.column()
+            col.active = mod.use_foam
+            col.label("Foam Data Layer Name:")
+            col.prop(mod, "foam_layer_name", text="")
+    
+            box.separator()
+    
+            if mod.is_cached:
+                box.operator("object.ocean_bake", text="Free Bake").free = True
+            else:
+                box.operator("object.ocean_bake").free = False
+    
+            split = box.split()
+            split.enabled = not mod.is_cached
+    
+            col = split.column(align=True)
+            col.prop(mod, "frame_start", text="Start")
+            col.prop(mod, "frame_end", text="End")
+    
+            col = split.column(align=True)
+            col.label(text="Cache path:")
+            col.prop(mod, "filepath", text="")
+    
+            split = box.split()
+            split.enabled = not mod.is_cached
+    
+            col = split.column()
+            col.active = mod.use_foam
+            col.prop(mod, "bake_foam_fade")
+    
+            col = split.column()
                         
     if mod.type == 'ARRAY':
         draw_array_modifier(layout)
@@ -905,8 +1002,10 @@ def draw_modifier(mod,layout,obj):
         draw_wireframe_modifier(layout)
     elif mod.type == 'DISPLACE':
         draw_displace_modifier(layout)        
+    elif mod.type == 'OCEAN':
+        draw_ocean_modifier(layout)
     elif mod.type == 'PARTICLE_SYSTEM':
-        draw_particle_system(layout)
+        draw_particle_system(layout)        
     else:
         row = layout.row()
         row.label(mod.name + " view ")
