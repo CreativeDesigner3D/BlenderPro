@@ -797,6 +797,7 @@ def draw_modifier(mod,layout,obj):
             row.prop(mod, "strength")            
     
     def draw_particle_system(layout):
+        ob = bpy.context.object
         col = layout.column(align=True)
         box = col.box()
         row = box.row()
@@ -824,17 +825,52 @@ def draw_modifier(mod,layout,obj):
             row = box.row()
             row.label("Number of Particles:")
             row.prop(ps_settings,'count',text="")
-            row = box.row(align=True)
-            row.label("Child Particles:")
-            row.prop(ps_settings,'child_nbr',text="Display")            
-            row.prop(ps_settings,'rendered_child_count',text="Child")
+
             row = box.row()
             row.label("Hair Length:")            
             row.prop(ps_settings,'hair_length',text="")
-            row = box.row()
-            row.label("Hair Length:")            
-            row.prop(ps_settings,'normal_factor',text="")            
+#             row = box.row()
+#             row.label("Hair Length:")            
+#             row.prop(ps_settings,'normal_factor',text="")            
             
+            row = box.row()
+            row.label("Twist:")            
+            row.prop(ps_settings,'brownian_factor',text="")            
+            
+            row = box.row()
+            row.label("Children Type:")            
+            row.prop(ps_settings,'child_type',text="") 
+            
+          
+            
+            
+            if ps_settings.child_type != 'NONE':
+                row = box.row(align=True)
+                row.label("Child Quantity:")
+                row.prop(ps_settings,'child_nbr',text="Display")            
+                row.prop(ps_settings,'rendered_child_count',text="Render")            
+                
+                row = box.row()
+                row.label("Random Length:")            
+                row.prop(ps_settings,'length_random',text="")                   
+                
+                row = box.row(align=True)
+                row.label("Clump Amount:")
+                row.prop(ps_settings,'clump_factor',text="") 
+                
+                row = box.row(align=True)
+                row.label("Child Size:")
+                row.prop(ps_settings,'child_length',text="Length") 
+                row.prop(ps_settings,'child_length_threshold',text="Threshold") 
+                row = box.row(align=True)
+                row.label(" ")
+                row.prop(ps_settings,'child_radius',text="Radius") 
+                row.prop(ps_settings,'roughness_endpoint',text="Roughness Endpoint") 
+                row = box.row(align=True)
+                row.label(" ")
+                row.prop(ps_settings,'randomness',text="Randomn") 
+                row.prop(ps_settings,'roughness_2',text="Roughness 2") 
+
             row = box.row()
             row.label("Random Size:")            
             row.prop(ps_settings,'size_random',text="",slider=True)              
@@ -850,6 +886,15 @@ def draw_modifier(mod,layout,obj):
             row = box.row()
             row.label("Render Type:")            
             row.prop(ps_settings,'render_type',text="")
+            
+            col = box.column()
+            row = col.row(align=True)
+            row.prop_search(ps, "vertex_group_density", ob, "vertex_groups", text="Density")
+            row.prop(ps, "invert_vertex_group_density", text="", toggle=True, icon='ARROW_LEFTRIGHT')
+    
+            row = col.row(align=True)
+            row.prop_search(ps, "vertex_group_length", ob, "vertex_groups", text="Length")
+            row.prop(ps, "invert_vertex_group_length", text="", toggle=True, icon='ARROW_LEFTRIGHT')               
             
             if ps_settings.render_type == 'OBJECT':
                 row = box.row()

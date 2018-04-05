@@ -994,7 +994,7 @@ class SCENE_PT_outliner(Panel):
                 box.prop(node.inputs[1],'default_value',text="Strength")
             if node.bl_idname == 'ShaderNodeMapping':
                 box.prop(node,'rotation')
-        box.operator('object_props.open_new_window',text="Show Node Editor",icon='NODETREE').space_type = 'NODE_EDITOR' 
+        box.operator('view3d.open_world_editor',text="Show Node Editor",icon='NODETREE')
         
     def draw_materials(self,layout,context):
         scene = context.scene

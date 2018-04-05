@@ -1216,6 +1216,21 @@ class OPS_open_texture_editor(bpy.types.Operator):
                 window.screen.areas[0].type = 'IMAGE_EDITOR'
         return {'FINISHED'} 
 
+class OPS_open_world_editor(bpy.types.Operator):
+    bl_idname = "view3d.open_world_editor"
+    bl_label = "Open World Editor"
+        
+    def execute(self, context):
+        bpy.ops.screen.userpref_show('INVOKE_DEFAULT')
+        for window in context.window_manager.windows:
+            if len(window.screen.areas) == 1 and window.screen.areas[0].type == 'USER_PREFERENCES':
+                window.screen.areas[0].type = 'NODE_EDITOR'
+                for space in window.screen.areas[0].spaces:
+                    if space.type == 'NODE_EDITOR':
+                        space.shader_type = 'WORLD'
+                        
+        return {'FINISHED'} 
+
 def register():
     bpy.utils.register_class(OPS_viewport_options)
     bpy.utils.register_class(OPS_change_shademode)
@@ -1232,6 +1247,7 @@ def register():
     bpy.utils.register_class(OPS_set_base_point)
     bpy.utils.register_class(OPS_create_group_instance)
     bpy.utils.register_class(OPS_open_texture_editor)
+    bpy.utils.register_class(OPS_open_world_editor)
     
 def unregister():
     pass

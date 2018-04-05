@@ -132,8 +132,9 @@ class LIBRARY_OT_add_group_from_library(bpy.types.Operator):
         with bpy.data.libraries.load(group_file_path, False, False) as (data_from, data_to):
             
             for grp in data_from.groups:
-                data_to.groups = [grp]
-                break
+                if grp == self.group_name:
+                    data_to.groups = [grp]
+                    break
             
         for grp in data_to.groups:
             for obj in grp.objects:
@@ -222,6 +223,9 @@ class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
     
     grp_name = bpy.props.StringProperty(name="Group Name")
     group_category = bpy.props.EnumProperty(name="Object Category",items=enum_group_categories,update=update_group_category)
+    save_file = bpy.props.BoolProperty(name="Save File")
+    create_new_category = bpy.props.BoolProperty(name="Create New Category")
+    new_category_name = bpy.props.StringProperty(name="New Category Name")
     
     @classmethod
     def poll(cls, context):
@@ -287,13 +291,25 @@ class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
     def draw(self, context):
         layout = self.layout
         path = os.path.join(get_library_path() ,self.group_category) 
-        files = os.listdir(path)               
-        layout.label("Select folder to save group to",icon='FILE_FOLDER')
-        layout.prop(self,'group_category',text="",icon='FILE_FOLDER')
+        files = os.listdir(path)
+        if self.create_new_category:
+            row = layout.split(percentage=.6)
+            row.label("Enter new folder name:",icon='FILE_FOLDER')
+            row.prop(self,'create_new_category',text="Create New")
+            layout.prop(self,'new_category_name',text="",icon='FILE_FOLDER')
+        else:
+            row = layout.split(percentage=.6)
+            row.label("Select folder to save to:",icon='FILE_FOLDER')
+            row.prop(self,'create_new_category',text="Create New")
+            layout.prop(self,'group_category',text="",icon='FILE_FOLDER')
         layout.label("Name: " + self.grp_name)
         if self.grp_name + ".blend" in files or self.grp_name + ".png" in files:
             layout.label("File already exists",icon="ERROR")  
-            
+        if bpy.data.filepath != "" and bpy.data.is_dirty:
+            row = layout.split(percentage=.6)
+            row.label("File is not saved",icon="ERROR")
+            row.prop(self,'save_file',text="Auto Save")
+        
     def execute(self, context):
         
         grp_to_save = bpy.data.groups[context.scene.outliner.selected_group_index]
@@ -305,13 +321,13 @@ class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
         if not os.path.exists(bpy.app.tempdir):
             os.makedirs(bpy.app.tempdir)
 
-        subprocess.Popen(r'explorer ' + bpy.app.tempdir)
+#         subprocess.Popen(r'explorer ' + bpy.app.tempdir)
         
         subprocess.call(bpy.app.binary_path + ' "' + utils_library.get_thumbnail_file_path() + '" -b --python "' + thumbnail_script_path + '"')   
         subprocess.call(bpy.app.binary_path + ' -b --python "' + save_script_path + '"')
         
         os.remove(thumbnail_script_path)
-#         os.remove(save_script_path)        
+        os.remove(save_script_path)        
         
         return {'FINISHED'}    
     
