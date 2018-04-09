@@ -841,9 +841,6 @@ def draw_modifier(mod,layout,obj):
             row.label("Children Type:")            
             row.prop(ps_settings,'child_type',text="") 
             
-          
-            
-            
             if ps_settings.child_type != 'NONE':
                 row = box.row(align=True)
                 row.label("Child Quantity:")
@@ -904,7 +901,7 @@ def draw_modifier(mod,layout,obj):
                 row.prop(ps_settings,'use_global_dupli')
                 row.prop(ps_settings,'use_rotation_dupli')
                 row.prop(ps_settings,'use_scale_dupli')        
-                     
+                
             if ps_settings.render_type == 'GROUP':
                 row = box.row()
                 row.label("Group:")            

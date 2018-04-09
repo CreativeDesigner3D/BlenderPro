@@ -107,6 +107,7 @@ class LIBRARY_OT_add_group_from_library(bpy.types.Operator):
     def invoke(self,context,event):
         self.parent_objects = []
         self.group_objects = []
+        clear_group_categories(self,context)
         update_group_category(self,context)
         wm = context.window_manager
         wm_props = wm.bp_lib
@@ -213,6 +214,7 @@ class LIBRARY_OT_add_group_from_library(bpy.types.Operator):
         bpy.ops.object.select_all(action='DESELECT')
         for obj in self.parent_objects:
             obj.select = True
+            context.scene.objects.active = obj
         #SELECT BASE POINTS
         context.area.tag_redraw()
         return {'FINISHED'}
@@ -290,30 +292,41 @@ class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
         
     def draw(self, context):
         layout = self.layout
-        path = os.path.join(get_library_path() ,self.group_category) 
-        files = os.listdir(path)
+        if self.create_new_category:
+            path = os.path.join(get_library_path() ,self.new_category_name) 
+        else:
+            path = os.path.join(get_library_path() ,self.group_category) 
+        files = os.listdir(path) if os.path.exists(path) else []
         if self.create_new_category:
             row = layout.split(percentage=.6)
             row.label("Enter new folder name:",icon='FILE_FOLDER')
-            row.prop(self,'create_new_category',text="Create New")
+            row.prop(self,'create_new_category',text="Create New",icon='NEWFOLDER')
             layout.prop(self,'new_category_name',text="",icon='FILE_FOLDER')
         else:
             row = layout.split(percentage=.6)
             row.label("Select folder to save to:",icon='FILE_FOLDER')
-            row.prop(self,'create_new_category',text="Create New")
+            row.prop(self,'create_new_category',text="Create New",icon='NEWFOLDER')
             layout.prop(self,'group_category',text="",icon='FILE_FOLDER')
         layout.label("Name: " + self.grp_name)
         if self.grp_name + ".blend" in files or self.grp_name + ".png" in files:
-            layout.label("File already exists",icon="ERROR")  
+            layout.label("File already exists",icon="ERROR")
         if bpy.data.filepath != "" and bpy.data.is_dirty:
             row = layout.split(percentage=.6)
             row.label("File is not saved",icon="ERROR")
             row.prop(self,'save_file',text="Auto Save")
         
     def execute(self, context):
-        
+        if bpy.data.filepath == "":
+            bpy.ops.wm.save_as_mainfile(filepath=os.path.join(bpy.app.tempdir,"temp_blend.blend"))
+                    
         grp_to_save = bpy.data.groups[context.scene.outliner.selected_group_index]
-        directory_to_save_to = os.path.join(get_library_path() ,self.group_category) 
+        if self.create_new_category:
+            os.makedirs(os.path.join(get_library_path() ,self.new_category_name))
+            
+            directory_to_save_to = os.path.join(get_library_path() ,self.new_category_name) 
+        else:
+            directory_to_save_to = os.path.join(get_library_path() ,self.group_category) 
+            
         
         thumbnail_script_path = self.create_group_thumbnail_script(directory_to_save_to, bpy.data.filepath, grp_to_save.name)
         save_script_path = self.create_group_save_script(directory_to_save_to, bpy.data.filepath, grp_to_save.name)

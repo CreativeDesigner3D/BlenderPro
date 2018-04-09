@@ -1231,6 +1231,61 @@ class OPS_open_world_editor(bpy.types.Operator):
                         
         return {'FINISHED'} 
 
+def update_particle_paint_name(self,context):
+    for i, particle in enumerate(self.particle_systems):
+        if particle:
+            self.group_name = bpy.data.particles[i].name
+
+class OPS_particle_paint(bpy.types.Operator):
+    bl_idname = "view3d.particle_paint"
+    bl_label = "Particle Paint"
+
+    particle_systems = bpy.props.BoolVectorProperty(name="Particle Systems", 
+                                                    description="Determines if the particle system is set to draw", 
+                                                    size=32,
+                                                    update=update_particle_paint_name)
+
+    group_name = bpy.props.StringProperty(name="Group Name")
+
+    def check(self, context):
+        return True
+
+    @classmethod
+    def poll(cls, context):
+        if context.object and len(bpy.data.particles) > 0:
+            return True
+        else:
+            return False
+
+    def execute(self, context):
+        particle = None
+        for i, particle in enumerate(self.particle_systems):
+            if particle:
+                particle_settings = bpy.data.particles[i]
+                
+        obj = context.object
+        vgrp = obj.vertex_groups.new(self.group_name)
+        mod = obj.modifiers.new(self.group_name,'PARTICLE_SYSTEM')
+        mod.particle_system.settings = particle_settings
+        mod.particle_system.vertex_group_density = self.group_name
+        bpy.ops.object.mode_set(mode='WEIGHT_PAINT') 
+        #GET SELECTED SETTINGS
+        #mod.settings = bpy.data.particles[name]
+        return {'FINISHED'}
+        
+    def invoke(self,context,event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width=400)
+        
+    def draw(self, context):
+        layout = self.layout
+        layout.label("Select the Particles to Draw:")
+        for i, particle in enumerate(bpy.data.particles):
+            row = layout.row()
+            row.prop(self,'particle_systems',index=i,text="")
+            row.label(particle.name)
+        layout.prop(self,'group_name',text="Particle Name")
+        
 def register():
     bpy.utils.register_class(OPS_viewport_options)
     bpy.utils.register_class(OPS_change_shademode)
@@ -1248,6 +1303,7 @@ def register():
     bpy.utils.register_class(OPS_create_group_instance)
     bpy.utils.register_class(OPS_open_texture_editor)
     bpy.utils.register_class(OPS_open_world_editor)
+    bpy.utils.register_class(OPS_particle_paint)
     
 def unregister():
     pass

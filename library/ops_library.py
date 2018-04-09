@@ -40,7 +40,7 @@ class LIBRARY_OT_create_new_folder(bpy.types.Operator):
 
     def execute(self, context):
         path = os.path.join(self.path, self.folder_name)
-    
+        
         if not os.path.exists(path):
             os.makedirs(path)
             

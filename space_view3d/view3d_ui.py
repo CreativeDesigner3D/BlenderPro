@@ -475,7 +475,8 @@ class VIEW3D_MT_drawing_tools(bpy.types.Menu):
         layout.operator("view3d.draw_assembly", icon='MESH_CUBE',text="Draw Box") 
         layout.operator("view3d.draw_plane", icon='MESH_PLANE',text="Draw Plane")   
         layout.operator("view3d.draw_curve", icon='CURVE_DATA',text="Draw Lines")  
-        layout.operator("view3d.place_area_lamp", icon='LAMP_POINT',text="Draw Area Lamp")    
+        layout.operator("view3d.place_area_lamp", icon='LAMP_POINT',text="Draw Area Lamp")   
+        layout.operator("view3d.particle_paint", icon='PARTICLES',text="Draw Particles")  
 
 class VIEW3D_PT_Standard_Objects(bpy.types.Panel):
     bl_label = "Standard Objects"
