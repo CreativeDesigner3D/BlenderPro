@@ -130,8 +130,9 @@ class LIBRARY_OT_add_object_from_library(bpy.types.Operator):
         object_file_path = os.path.join(get_library_path() ,self.object_category,self.object_name + ".blend")
         with bpy.data.libraries.load(object_file_path, False, False) as (data_from, data_to):
             for obj in data_from.objects:
-                data_to.objects = [obj]
-                break
+                if obj == self.object_name:
+                    data_to.objects = [obj]
+                    break
         for obj in data_to.objects:
             context.scene.objects.link(obj)
             return obj
@@ -211,7 +212,10 @@ class LIBRARY_OT_save_object_to_library(bpy.types.Operator):
     
     obj_name = bpy.props.StringProperty(name="Obj Name")
     object_category = bpy.props.EnumProperty(name="Object Category",items=enum_object_categories,update=update_object_category)
-    
+    save_file = bpy.props.BoolProperty(name="Save File")
+    create_new_category = bpy.props.BoolProperty(name="Create New Category")
+    new_category_name = bpy.props.StringProperty(name="New Category Name")
+        
     obj = None
     
     @classmethod
@@ -232,12 +236,25 @@ class LIBRARY_OT_save_object_to_library(bpy.types.Operator):
         
     def draw(self, context):
         layout = self.layout
-        path = os.path.join(get_library_path() ,self.object_category) 
-        files = os.listdir(path)
+        if self.create_new_category:
+            path = os.path.join(get_library_path() ,self.new_category_name) 
+        else:
+            path = os.path.join(get_library_path() ,self.object_category) 
+        files = os.listdir(path) if os.path.exists(path) else []
 
-        layout.label("Select folder to save object to")
-        layout.prop(self,'object_category',text="",icon='FILE_FOLDER')
+        if self.create_new_category:
+            row = layout.split(percentage=.6)
+            row.label("Enter new folder name:",icon='FILE_FOLDER')
+            row.prop(self,'create_new_category',text="Create New",icon='NEWFOLDER')
+            layout.prop(self,'new_category_name',text="",icon='FILE_FOLDER')
+        else:
+            row = layout.split(percentage=.6)
+            row.label("Select folder to save to:",icon='FILE_FOLDER')
+            row.prop(self,'create_new_category',text="Create New",icon='NEWFOLDER')
+            layout.prop(self,'object_category',text="",icon='FILE_FOLDER')
+            
         layout.label("Name: " + self.obj_name)
+        
         if self.obj_name + ".blend" in files or self.obj_name + ".png" in files:
             layout.label("File already exists",icon="ERROR")        
         
@@ -295,8 +312,13 @@ class LIBRARY_OT_save_object_to_library(bpy.types.Operator):
         if bpy.data.filepath == "":
             bpy.ops.wm.save_as_mainfile(filepath=os.path.join(bpy.app.tempdir,"temp_blend.blend"))
         
-        obj_to_save = context.scene.objects[context.scene.outliner.selected_object_index]
-        directory_to_save_to = os.path.join(get_library_path() ,self.object_category) 
+        obj_to_save = bpy.data.groups[context.scene.outliner.selected_object_index]
+        if self.create_new_category:
+            os.makedirs(os.path.join(get_library_path() ,self.new_category_name))
+            
+            directory_to_save_to = os.path.join(get_library_path() ,self.new_category_name) 
+        else:
+            directory_to_save_to = os.path.join(get_library_path() ,self.group_category)         
         
         thumbnail_script_path = self.create_object_thumbnail_script(directory_to_save_to, bpy.data.filepath, obj_to_save.name)
         save_script_path = self.create_object_save_script(directory_to_save_to, bpy.data.filepath, obj_to_save.name)

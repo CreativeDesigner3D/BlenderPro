@@ -307,7 +307,10 @@ class LIBRARY_OT_save_material_to_library(bpy.types.Operator):
     
     mat_name = bpy.props.StringProperty(name="Material Name")
     material_category = bpy.props.EnumProperty(name="Material Category",items=enum_material_categories,update=update_material_category)
-    
+    save_file = bpy.props.BoolProperty(name="Save File")
+    create_new_category = bpy.props.BoolProperty(name="Create New Category")
+    new_category_name = bpy.props.StringProperty(name="New Category Name")
+        
     @classmethod
     def poll(cls, context):
         if context.scene.outliner.selected_material_index + 1 <= len(bpy.data.materials):

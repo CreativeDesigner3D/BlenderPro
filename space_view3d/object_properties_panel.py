@@ -865,7 +865,7 @@ def draw_modifier(mod,layout,obj):
                 row.prop(ps_settings,'roughness_endpoint',text="Roughness Endpoint") 
                 row = box.row(align=True)
                 row.label(" ")
-                row.prop(ps_settings,'randomness',text="Randomn") 
+#                 row.prop(ps_settings,'randomness',text="Random")
                 row.prop(ps_settings,'roughness_2',text="Roughness 2") 
 
             row = box.row()
