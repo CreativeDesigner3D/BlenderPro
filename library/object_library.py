@@ -312,18 +312,18 @@ class LIBRARY_OT_save_object_to_library(bpy.types.Operator):
         if bpy.data.filepath == "":
             bpy.ops.wm.save_as_mainfile(filepath=os.path.join(bpy.app.tempdir,"temp_blend.blend"))
         
-        obj_to_save = bpy.data.groups[context.scene.outliner.selected_object_index]
+        obj_to_save = bpy.data.objects[context.scene.outliner.selected_object_index]
         if self.create_new_category:
             os.makedirs(os.path.join(get_library_path() ,self.new_category_name))
             
             directory_to_save_to = os.path.join(get_library_path() ,self.new_category_name) 
         else:
-            directory_to_save_to = os.path.join(get_library_path() ,self.group_category)         
+            directory_to_save_to = os.path.join(get_library_path() ,self.object_category)         
         
         thumbnail_script_path = self.create_object_thumbnail_script(directory_to_save_to, bpy.data.filepath, obj_to_save.name)
         save_script_path = self.create_object_save_script(directory_to_save_to, bpy.data.filepath, obj_to_save.name)
 
-#         subprocess.Popen(r'explorer ' + bpy.app.tempdir)
+        subprocess.Popen(r'explorer ' + bpy.app.tempdir)
         
         subprocess.call(bpy.app.binary_path + ' "' + utils_library.get_thumbnail_file_path() + '" -b --python "' + thumbnail_script_path + '"')   
         subprocess.call(bpy.app.binary_path + ' -b --python "' + save_script_path + '"')
