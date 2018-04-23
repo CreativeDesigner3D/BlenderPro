@@ -498,31 +498,160 @@ class WORLD_OT_create_world_from_hdr(Operator):
         filename , ext = os.path.splitext(file_name)        
         
         world = bpy.data.worlds.new(filename)
+        world.use_nodes = True
+        world.node_tree.nodes.clear()
+        
         context.scene.world = world
         new_image = bpy.data.images.load(self.filepath)
+
+        output = world.node_tree.nodes.new("ShaderNodeOutputWorld")
+        output.location = (0,0)
         
-        world.use_nodes = True
+        mix_shader = world.node_tree.nodes.new("ShaderNodeMixShader")
+        mix_shader.location = (-200,0)
+        
+        background = world.node_tree.nodes.new("ShaderNodeBackground")
+        background.location = (-400,0)
+        
+        background_2 = world.node_tree.nodes.new("ShaderNodeBackground")
+        background_2.location = (-400,-200)        
+        
+        light_path = world.node_tree.nodes.new("ShaderNodeLightPath")
+        light_path.location = (-400,400)        
+        
+        #ENVIRONMENT LIGHTING
+        math_add = world.node_tree.nodes.new("ShaderNodeMath")
+        math_add.name = "ADD"
+        math_add.operation = 'ADD'
+        math_add.location = (-600,-300)
+         
+        #SHADOWS
+        math_multiply = world.node_tree.nodes.new("ShaderNodeMath")
+        math_multiply.name = "MULTIPLY"
+        math_multiply.operation = 'MULTIPLY'
+        math_multiply.inputs[1].default_value = 1     
+        math_multiply.location = (-800,-300) 
+        
         texture = world.node_tree.nodes.new("ShaderNodeTexEnvironment")
         texture.image = new_image
-        texture.location = world.node_tree.nodes[0].location
-        texture.location = (-200,300)
-        
-        mapping = world.node_tree.nodes.new("ShaderNodeMapping")
-        mapping.location = world.node_tree.nodes[0].location
-        mapping.location = (-550,300)
+        texture.location = (-1000,0)
 
+        mapping = world.node_tree.nodes.new("ShaderNodeMapping")
+        mapping.location = (-1500,0)
+ 
         texcord = world.node_tree.nodes.new("ShaderNodeTexCoord")
-        texcord.location = world.node_tree.nodes[0].location
-        texcord.location = (-750,300)
-        
-        background = world.node_tree.nodes[1]
+        texcord.location = (-1700,0)
         
         new_links = world.node_tree.links.new
-        new_links(background.inputs[0], texture.outputs[0])        
+        new_links(output.inputs[0], mix_shader.outputs[0])
+        new_links(mix_shader.inputs[0], light_path.outputs[0]) 
+        new_links(mix_shader.inputs[2], background.outputs[0])
+        new_links(mix_shader.inputs[1], background_2.outputs[0])  
+        new_links(background_2.inputs[1], math_add.outputs[0])  
+        new_links(math_add.inputs[0], math_multiply.outputs[0]) 
+        new_links(math_multiply.inputs[0], texture.outputs[0]) 
+        new_links(background_2.inputs[0], texture.outputs[0]) 
+        new_links(background.inputs[0], texture.outputs[0])     
         new_links(texture.inputs[0], mapping.outputs[0])
         new_links(mapping.inputs[0], texcord.outputs[0])
         
         return {'FINISHED'}
+    
+class WORLD_OT_create_sky_world(Operator):
+    """Creates a New Sky World"""
+    bl_idname = "world.create_sky_world"
+    bl_label = "Create Sky World"
+
+    def execute(self, context):
+        world = bpy.data.worlds.new("Sky")
+        world.use_nodes = True
+        world.node_tree.nodes.clear()
+        
+        context.scene.world = world
+
+        output = world.node_tree.nodes.new("ShaderNodeOutputWorld")
+        output.location = (0,0)
+        
+        background = world.node_tree.nodes.new("ShaderNodeBackground")
+        background.location = (-200,0)        
+        
+        sky = world.node_tree.nodes.new("ShaderNodeTexSky")
+        sky.location = (-400,0)
+
+        new_links = world.node_tree.links.new
+        new_links(output.inputs[0], background.outputs[0])
+        new_links(background.inputs[0], sky.outputs[0]) 
+
+        return {'FINISHED'}
+    
+class MATERIAL_OT_create_principled_material(Operator):
+    """Creates a New Sky World"""
+    bl_idname = "material.create_principled_material"
+    bl_label = "Create Principled Material"
+
+    def execute(self, context):
+        material = bpy.data.materials.new("Principled")
+        material.use_nodes = True
+        material.node_tree.nodes.clear()
+
+        output = material.node_tree.nodes.new("ShaderNodeOutputMaterial")
+        output.location = (0,0)
+        
+        princ = material.node_tree.nodes.new("ShaderNodeBsdfPrincipled")
+        princ.location = (-200,0)        
+        
+        new_links = material.node_tree.links.new
+        new_links(output.inputs[0], princ.outputs[0])
+
+        return {'FINISHED'}    
+    
+class MATERIAL_OT_create_material_from_image(Operator):
+    """Creates a New Sky World"""
+    bl_idname = "material.create_material_from_image"
+    bl_label = "Create Material From Image"
+
+    filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+
+    def draw(self, context):
+        self.layout.operator('file.select_all_toggle')  
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        wm.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+    def execute(self, context):
+        file_path, file_name = os.path.split(self.filepath)
+        filename , ext = os.path.splitext(file_name)    
+        new_image = bpy.data.images.load(self.filepath)
+        
+        material = bpy.data.materials.new(filename)
+        material.use_nodes = True
+        material.node_tree.nodes.clear()
+
+        output = material.node_tree.nodes.new("ShaderNodeOutputMaterial")
+        output.location = (0,0)
+        
+        princ = material.node_tree.nodes.new("ShaderNodeBsdfPrincipled")
+        princ.location = (-200,0)        
+
+        texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+        texture.image = new_image
+        texture.location = (-400,0)  
+
+        mapping = material.node_tree.nodes.new("ShaderNodeMapping")
+        mapping.location = (-800,0)
+ 
+        texcord = material.node_tree.nodes.new("ShaderNodeTexCoord")
+        texcord.location = (-1000,0)
+
+        new_links = material.node_tree.links.new
+        new_links(output.inputs[0], princ.outputs[0])
+        new_links(princ.inputs[0], texture.outputs[0]) 
+        new_links(texture.inputs[0], mapping.outputs[0]) 
+        new_links(mapping.inputs[0], texcord.outputs[0]) 
+
+        return {'FINISHED'}        
     
 class SCENE_OT_set_background_image_scale(Operator):
     bl_idname = "scene.set_background_image_scale"
@@ -955,7 +1084,9 @@ class SCENE_PT_outliner(Panel):
                 row.prop(bg, "size",text="")        
 
     def draw_scenes(self,layout,context):
-        layout.operator("scene.create_new_scene",icon='ZOOMIN')
+        row = layout.row()
+        row.scale_y = 1.3
+        row.menu("VIEW3D_MT_add_scene",icon='SCENE_DATA')
         
         if len(bpy.data.scenes) > 0:
             layout.template_list("FD_UL_scenes", "", bpy.data, "scenes", context.scene.outliner, "selected_scene_index", rows=4)
@@ -979,8 +1110,10 @@ class SCENE_PT_outliner(Panel):
         scene = context.scene
         world = scene.world
         view = context.space_data
-        layout.operator("world.new",icon='ZOOMIN')
-        layout.operator("world.create_new_world_from_hdr",icon='FILE_IMAGE')
+        
+        row = layout.row()
+        row.scale_y = 1.3        
+        row.menu('VIEW3D_MT_add_world',icon='WORLD')
 
         if len(bpy.data.worlds) > 0:
             layout.template_list("FD_UL_worlds", "", bpy.data, "worlds", scene.outliner, "selected_world_index", rows=4)
@@ -998,7 +1131,9 @@ class SCENE_PT_outliner(Panel):
         
     def draw_materials(self,layout,context):
         scene = context.scene
-        layout.operator("material.new",icon='ZOOMIN')
+        row = layout.row()
+        row.scale_y = 1.3        
+        row.menu("VIEW3D_MT_add_material",icon='MATERIAL')
         row = layout.row(align=True)
         row.scale_y = 1.3
         row.operator("library.add_material_from_library",text="Material Library",icon='EXTERNAL_DATA')        
@@ -1012,7 +1147,9 @@ class SCENE_PT_outliner(Panel):
 
     def draw_objects(self,layout,context):
         scene = context.scene
-        layout.menu("VIEW3D_MT_add_object",text="Add Object",icon='OBJECT_DATA')
+        row = layout.row()
+        row.scale_y = 1.3        
+        row.menu("VIEW3D_MT_add_object",text="Add Object",icon='OBJECT_DATA')
         row = layout.row(align=True)
         row.scale_y = 1.3
         row.operator("library.add_object_from_library",text="Object Library",icon='EXTERNAL_DATA')
@@ -1028,7 +1165,9 @@ class SCENE_PT_outliner(Panel):
 
     def draw_groups(self,layout,context):
         scene = context.scene
-        layout.operator('group.make_group_from_selection',icon='ZOOMIN')
+        row = layout.row()
+        row.scale_y = 1.3        
+        row.menu('VIEW3D_MT_add_group',icon='GROUP')
 
         row = layout.row(align=True)
         row.scale_y = 1.3        
@@ -1144,6 +1283,42 @@ class FD_UL_groups(UIList):
         layout.label(item.name,icon='GROUP')
         layout.operator('group.delete_group',icon='X',text="",emboss=False).group_name = item.name
 
+class VIEW3D_MT_add_world(bpy.types.Menu):
+    bl_label = "Add World"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator("world.new",icon='ZOOMIN')
+        layout.operator("world.create_sky_world",icon='LAMP_HEMI')
+        layout.operator("world.create_new_world_from_hdr",icon='FILE_IMAGE')
+
+class VIEW3D_MT_add_material(bpy.types.Menu):
+    bl_label = "Add Material"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator("material.new",icon='ZOOMIN')
+        layout.operator("material.create_principled_material",icon='SMOOTH')
+        layout.operator("material.create_material_from_image",icon='IMAGE_COL')
+        
+class VIEW3D_MT_add_group(bpy.types.Menu):
+    bl_label = "Add Group"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator('group.make_group_from_selection',icon='ZOOMIN')
+
+class VIEW3D_MT_add_scene(bpy.types.Menu):
+    bl_label = "Add Scene"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator("scene.create_new_scene",icon='ZOOMIN',text="Create New")
+        layout.operator("scene.new",icon='ZOOMIN',text="Create Copy (Copy Settings)").type = 'EMPTY'
+        layout.operator("scene.new",icon='ZOOMIN',text="Create Copy (Link Objects)").type = 'LINK_OBJECTS'
+        layout.operator("scene.new",icon='ZOOMIN',text="Create Copy (Link Data)").type = 'LINK_OBJECT_DATA'
+        layout.operator("scene.new",icon='ZOOMIN',text="Create Copy (Copy Everything)").type = 'FULL_COPY'
+        
 # Add-ons Preferences Update Panel
 
 # Define Panel classes for updating
@@ -1180,6 +1355,7 @@ def register():
     bpy.utils.register_class(SCENE_OT_namedlayer_show_all)
     bpy.utils.register_class(GROUP_OT_make_group_from_selection)
     bpy.utils.register_class(WORLD_OT_create_world_from_hdr)
+    bpy.utils.register_class(WORLD_OT_create_sky_world)
     bpy.utils.register_class(SCENE_OT_set_background_image_scale)
     bpy.utils.register_class(SCENE_PT_outliner)
     bpy.utils.register_class(SCENE_OT_delete_scene)
@@ -1187,11 +1363,17 @@ def register():
     bpy.utils.register_class(MATERIAL_OT_delete_material)
     bpy.utils.register_class(GROUP_OT_delete_group)
     bpy.utils.register_class(WORLD_OT_delete_world)
+    bpy.utils.register_class(MATERIAL_OT_create_principled_material)
+    bpy.utils.register_class(MATERIAL_OT_create_material_from_image)
     bpy.utils.register_class(FD_UL_objects)
     bpy.utils.register_class(FD_UL_worlds)
     bpy.utils.register_class(FD_UL_materials)
     bpy.utils.register_class(FD_UL_scenes)
     bpy.utils.register_class(FD_UL_groups)
+    bpy.utils.register_class(VIEW3D_MT_add_world)
+    bpy.utils.register_class(VIEW3D_MT_add_material)
+    bpy.utils.register_class(VIEW3D_MT_add_group)
+    bpy.utils.register_class(VIEW3D_MT_add_scene)
 
     bpy.types.Scene.namedlayers = PointerProperty(type=NamedLayers)
     bpy.types.Scene.outliner = PointerProperty(type=Outliner)
@@ -1214,6 +1396,8 @@ def unregister():
     bpy.utils.unregister_class(OBJECT_OT_delete_object)
     bpy.utils.unregister_class(MATERIAL_OT_delete_material)
     bpy.utils.unregister_class(WORLD_OT_delete_world)
+    bpy.utils.unregister_class(MATERIAL_OT_create_principled_material)
+    bpy.utils.unregister_class(MATERIAL_OT_create_material_from_image)
     bpy.utils.unregister_class(GROUP_OT_delete_group)
     bpy.utils.unregister_class(FD_UL_objects)
     bpy.utils.unregister_class(FD_UL_worlds)

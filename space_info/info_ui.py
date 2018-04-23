@@ -38,7 +38,20 @@ class INFO_HT_header(bpy.types.Header):
             row.operator("script.autoexec_warn_clear", text="Ignore")
             return   
         
+        box = row.box()
+        tab_row = box.row(align=True)
+        for screen in bpy.data.screens:
+            icon = 'FILE_TICK'
+            icon = 'LAYER_USED'
+            icon = 'LAYER_ACTIVE'
+            if screen.name == context.window.screen.name:
+                icon='FILE_TICK'
+            else:
+                icon='LAYER_USED'
+            tab_row.operator('info.change_interface',text=screen.name,icon=icon).interface_name = screen.name
+            
         row.label(text=scene.statistics(), translate=False)
+        
             
             
 class INFO_MT_menus(bpy.types.Menu):
@@ -54,7 +67,7 @@ class INFO_MT_menus(bpy.types.Menu):
         layout.menu("INFO_MT_edit",icon='RECOVER_AUTO',text="   Edit   ")
         layout.menu("INFO_MT_rendering",icon='RENDER_STILL',text="   Render    ")
         layout.menu("INFO_MT_help",icon='HELP',text="   Help   ")
-        layout.menu("INFO_MT_interface",icon='SPLITSCREEN',text="   Interface   ")
+        
 
 class INFO_MT_file(bpy.types.Menu):
     bl_label = "File"
@@ -127,7 +140,9 @@ class INFO_MT_edit(bpy.types.Menu):
         layout = self.layout
         layout.operator("ed.undo",icon='LOOP_BACK')
         layout.operator("ed.redo",icon='LOOP_FORWARDS')
-        layout.operator("ed.undo_history",icon='RECOVER_LAST')        
+        layout.operator("ed.undo_history",icon='RECOVER_LAST') 
+        layout.separator()
+        layout.menu("INFO_MT_interface",icon='SPLITSCREEN',text="Interface")       
         
 class INFO_MT_rendering(bpy.types.Menu):
     bl_label = "Rendering"
