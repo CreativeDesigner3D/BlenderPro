@@ -447,19 +447,24 @@ class LIBRARY_OT_assign_material_dialog(bpy.types.Operator):
         self.material = bpy.data.materials[self.material_name]
         self.obj = bpy.data.objects[self.object_name]
         wm = context.window_manager
-        return wm.invoke_props_dialog(self, width=400)
+        return wm.invoke_props_dialog(self, width=500)
         
     def draw(self,context):
         layout = self.layout
         layout.label(self.obj.name,icon='OBJECT_DATA')
         for index, mat_slot in enumerate(self.obj.material_slots):
-            row = layout.split(percentage=.8)
+            row = layout.split(percentage=.55)
             if mat_slot.name == "":
                 row.label('No Material')
             else:
-                row.prop(mat_slot,"name")
+                row.prop(mat_slot,"name",text="",icon='MATERIAL')
 #                 row.prop(mat_slot,"name",text=self.obj.cabinetlib.material_slots[index].name if len(self.obj.cabinetlib.material_slots) >= index+1 else "")
             props = row.operator('library.assign_material_to_slot',text="Assign",icon='BACK')
+            props.object_name = self.obj.name
+            props.material_name = self.material.name
+            props.index = index
+        
+            props = row.operator('library.replace_all_materials',text="Replace All",icon='FILE_REFRESH')
             props.object_name = self.obj.name
             props.material_name = self.material.name
             props.index = index
@@ -484,6 +489,28 @@ class LIBRARY_OT_assign_material_to_slot(bpy.types.Operator):
         obj.material_slots[self.index].material = mat
         return {'FINISHED'}
         
+class LIBRARY_OT_replace_all_materials(bpy.types.Operator):
+    bl_idname = "library.replace_all_materials"
+    bl_label = "Assign Material to Slot"
+    bl_options = {'UNDO'}
+    
+    #READONLY
+    material_name = bpy.props.StringProperty(name="Material Name")
+    object_name = bpy.props.StringProperty(name="Object Name")
+    
+    index = bpy.props.IntProperty(name="Index")
+    
+    def execute(self,context):
+        obj = bpy.data.objects[self.object_name]
+        mat = bpy.data.materials[self.material_name]
+        mat_to_replace = obj.material_slots[self.index].material
+        obj.material_slots[self.index].material = mat
+        for obj in bpy.data.objects:
+            for slot in obj.material_slots:
+                if slot.material == mat_to_replace:
+                    slot.material = mat
+        return {'FINISHED'}
+        
 def register():
     bpy.utils.register_class(LIBRARY_MT_material_library)
     bpy.utils.register_class(LIBRARY_OT_add_material_from_library)
@@ -492,6 +519,7 @@ def register():
     bpy.utils.register_class(LIBRARY_OT_assign_material)
     bpy.utils.register_class(LIBRARY_OT_assign_material_dialog)
     bpy.utils.register_class(LIBRARY_OT_assign_material_to_slot)
+    bpy.utils.register_class(LIBRARY_OT_replace_all_materials)
     
     
 def unregister():
@@ -502,4 +530,5 @@ def unregister():
     bpy.utils.unregister_class(LIBRARY_OT_assign_material)
     bpy.utils.unregister_class(LIBRARY_OT_assign_material_dialog)
     bpy.utils.unregister_class(LIBRARY_OT_assign_material_to_slot)
+    bpy.utils.unregister_class(LIBRARY_OT_replace_all_materials)
     
