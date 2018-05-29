@@ -1123,7 +1123,7 @@ class SCENE_PT_outliner(Panel):
         box.prop(world,'name')
         box.prop(view, "show_world",text="Show World in Viewport")
         for node in world.node_tree.nodes:
-            if node.bl_idname == 'ShaderNodeBackground':
+            if node.bl_idname == 'ShaderNodeBackground' and not node.inputs[1].is_linked:
                 box.prop(node.inputs[1],'default_value',text="Strength")
             if node.bl_idname == 'ShaderNodeMapping':
                 box.prop(node,'rotation')
