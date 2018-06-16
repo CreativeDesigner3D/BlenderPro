@@ -1012,6 +1012,49 @@ def draw_modifier(mod,layout,obj):
     
             col = split.column()
                         
+    def draw_multires_modifier(layout):
+        col = layout.column(align=True)
+        box = col.box()
+        row = box.row()
+        draw_show_expanded(mod,row)
+        row.prop(mod,'name',text="",icon='MOD_MULTIRES')
+        draw_apply_close(row)
+        if mod.show_expanded:
+            row = box.row()
+            draw_visibility(row)                   
+            box = col.box()    
+                        
+            box.row().prop(mod, "subdivision_type", expand=True)
+    
+            split = box.split()
+            col = split.column()
+            col.prop(mod, "levels", text="Preview")
+            col.prop(mod, "sculpt_levels", text="Sculpt")
+            col.prop(mod, "render_levels", text="Render")
+    
+            col = split.column()
+    
+            col.enabled = obj.mode != 'EDIT'
+            col.operator("object.multires_subdivide", text="Subdivide")
+            col.operator("object.multires_higher_levels_delete", text="Delete Higher")
+            col.operator("object.multires_reshape", text="Reshape")
+            col.operator("object.multires_base_apply", text="Apply Base")
+            col.prop(mod, "use_subsurf_uv")
+            col.prop(mod, "show_only_control_edges")
+    
+            box.separator()
+    
+            col = box.column()
+            row = col.row()
+            if mod.is_external:
+                row.operator("object.multires_external_pack", text="Pack External")
+                row.label()
+                row = col.row()
+                row.prop(mod, "filepath", text="")
+            else:
+                row.operator("object.multires_external_save", text="Save External...")
+                row.label()        
+                        
     if mod.type == 'ARRAY':
         draw_array_modifier(layout)
     elif mod.type == 'BEVEL':
@@ -1046,8 +1089,10 @@ def draw_modifier(mod,layout,obj):
         draw_displace_modifier(layout)        
     elif mod.type == 'OCEAN':
         draw_ocean_modifier(layout)
+    elif mod.type == 'MULTIRES':
+        draw_multires_modifier(layout)       
     elif mod.type == 'PARTICLE_SYSTEM':
-        draw_particle_system(layout)        
+        draw_particle_system(layout)
     else:
         row = layout.row()
         row.label(mod.name + " view ")
