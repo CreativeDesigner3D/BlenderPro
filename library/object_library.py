@@ -230,7 +230,7 @@ class LIBRARY_OT_save_object_to_library(bpy.types.Operator):
 
     def invoke(self,context,event):
         clear_object_categories(self,context)
-        self.obj_name = bpy.data.objects[context.scene.outliner.selected_object_index]
+        self.obj_name = bpy.data.objects[context.scene.outliner.selected_object_index].name
 #         self.obj_name = context.active_object.name
         wm = context.window_manager
         return wm.invoke_props_dialog(self, width=300)
@@ -324,13 +324,13 @@ class LIBRARY_OT_save_object_to_library(bpy.types.Operator):
         thumbnail_script_path = self.create_object_thumbnail_script(directory_to_save_to, bpy.data.filepath, obj_to_save.name)
         save_script_path = self.create_object_save_script(directory_to_save_to, bpy.data.filepath, obj_to_save.name)
 
-        subprocess.Popen(r'explorer ' + bpy.app.tempdir)
+#         subprocess.Popen(r'explorer ' + bpy.app.tempdir)
         
         subprocess.call(bpy.app.binary_path + ' "' + utils_library.get_thumbnail_file_path() + '" -b --python "' + thumbnail_script_path + '"')   
         subprocess.call(bpy.app.binary_path + ' -b --python "' + save_script_path + '"')
         
-#         os.remove(thumbnail_script_path)
-#         os.remove(save_script_path)
+        os.remove(thumbnail_script_path)
+        os.remove(save_script_path)
         
         return {'FINISHED'}
 
