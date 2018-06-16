@@ -117,34 +117,41 @@ class LIBRARY_OT_add_group_from_library(bpy.types.Operator):
         
     def draw(self, context):
         layout = self.layout
-        layout.prop(self,'group_category',text="",icon='FILE_FOLDER')  
-        layout.template_icon_view(self,"group_name",show_labels=True)  
-        layout.label(self.group_name)
+        if len(self.group_category) == 0:
+            layout.label("There are no assets in the library")
+        else:        
+            layout.prop(self,'group_category',text="",icon='FILE_FOLDER')  
+            layout.template_icon_view(self,"group_name",show_labels=True)  
+            layout.label(self.group_name)
         
     def execute(self, context):
-        self.create_drawing_plane(context)
         self.grp = self.get_group(context)
-        context.window_manager.modal_handler_add(self)
-        context.area.tag_redraw()
-        return {'RUNNING_MODAL'}
+        if self.grp:
+            self.create_drawing_plane(context)
+            context.window_manager.modal_handler_add(self)
+            context.area.tag_redraw()
+            return {'RUNNING_MODAL'}
+        else:
+            return {'CANCELLED'}
 
     def get_group(self,context):
         group_file_path = os.path.join(get_library_path() ,self.group_category,self.group_name + ".blend")
-        with bpy.data.libraries.load(group_file_path, False, False) as (data_from, data_to):
-            
-            for grp in data_from.groups:
-                if grp == self.group_name:
-                    data_to.groups = [grp]
-                    break
-            
-        for grp in data_to.groups:
-            for obj in grp.objects:
-                self.group_objects.append(obj)
-                context.scene.objects.link(obj)
-                if obj.parent is None:
-                    self.parent_objects.append(obj)   
-
-            return grp
+        if os.path.exists(group_file_path):
+            with bpy.data.libraries.load(group_file_path, False, False) as (data_from, data_to):
+                
+                for grp in data_from.groups:
+                    if grp == self.group_name:
+                        data_to.groups = [grp]
+                        break
+                
+            for grp in data_to.groups:
+                for obj in grp.objects:
+                    self.group_objects.append(obj)
+                    context.scene.objects.link(obj)
+                    if obj.parent is None:
+                        self.parent_objects.append(obj)   
+    
+                return grp
 
     def create_drawing_plane(self,context):
         bpy.ops.mesh.primitive_plane_add()

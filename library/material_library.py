@@ -112,26 +112,33 @@ class LIBRARY_OT_add_material_from_library(bpy.types.Operator):
         
     def draw(self, context):
         layout = self.layout
-        layout.prop(self,'material_category',text="",icon='FILE_FOLDER')  
-        layout.template_icon_view(self,"material_name",show_labels=True)  
-        layout.label(self.material_name)
+        if len(self.material_category) == 0:
+            layout.label("There are no assets in the library")
+        else:
+            layout.prop(self,'material_category',text="",icon='FILE_FOLDER')  
+            layout.template_icon_view(self,"material_name",show_labels=True)  
+            layout.label(self.material_name)
         
     def execute(self, context):
         self.mat = self.get_material(context)
-        context.window_manager.modal_handler_add(self)
-        context.area.tag_redraw()
-        return {'RUNNING_MODAL'}
+        if self.mat:
+            context.window_manager.modal_handler_add(self)
+            context.area.tag_redraw()
+            return {'RUNNING_MODAL'}
+        else:
+            return {'CANCELLED'}
         
     def get_material(self,context):
         material_file_path = os.path.join(get_library_path() ,self.material_category,self.material_name + ".blend")
-        with bpy.data.libraries.load(material_file_path, False, False) as (data_from, data_to):
-            
-            for mat in data_from.materials:
-                data_to.materials = [mat]
-                break
-            
-        for mat in data_to.materials:
-            return mat
+        if os.path.exists(material_file_path):
+            with bpy.data.libraries.load(material_file_path, False, False) as (data_from, data_to):
+                
+                for mat in data_from.materials:
+                    data_to.materials = [mat]
+                    break
+                
+            for mat in data_to.materials:
+                return mat
     
     def modal(self, context, event):
         context.window.cursor_set('PAINT_BRUSH')

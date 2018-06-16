@@ -115,27 +115,34 @@ class LIBRARY_OT_add_object_from_library(bpy.types.Operator):
         
     def draw(self, context):
         layout = self.layout
-        layout.prop(self,'object_category',text="",icon='FILE_FOLDER')  
-        layout.template_icon_view(self,"object_name",show_labels=True)  
-        layout.label(self.object_name)
+        if len(self.object_category) == 0:
+            layout.label("There are no assets in the library")
+        else:
+            layout.prop(self,'object_category',text="",icon='FILE_FOLDER')  
+            layout.template_icon_view(self,"object_name",show_labels=True)  
+            layout.label(self.object_name)
         
     def execute(self, context):
-        self.create_drawing_plane(context)
         self.obj = self.get_object(context)
-        context.window_manager.modal_handler_add(self)
-        context.area.tag_redraw()
-        return {'RUNNING_MODAL'}
+        if self.obj:
+            self.create_drawing_plane(context)
+            context.window_manager.modal_handler_add(self)
+            context.area.tag_redraw()
+            return {'RUNNING_MODAL'}
+        else:
+            return {'CANCELLED'}
 
     def get_object(self,context):
         object_file_path = os.path.join(get_library_path() ,self.object_category,self.object_name + ".blend")
-        with bpy.data.libraries.load(object_file_path, False, False) as (data_from, data_to):
-            for obj in data_from.objects:
-                if obj == self.object_name:
-                    data_to.objects = [obj]
-                    break
-        for obj in data_to.objects:
-            context.scene.objects.link(obj)
-            return obj
+        if os.path.exists(object_file_path):
+            with bpy.data.libraries.load(object_file_path, False, False) as (data_from, data_to):
+                for obj in data_from.objects:
+                    if obj == self.object_name:
+                        data_to.objects = [obj]
+                        break
+            for obj in data_to.objects:
+                context.scene.objects.link(obj)
+                return obj
 
     def create_drawing_plane(self,context):
         bpy.ops.mesh.primitive_plane_add()
