@@ -291,11 +291,12 @@ class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
         return os.path.join(bpy.app.tempdir,'save_temp.py')
 
     def invoke(self,context,event):
-        grp = bpy.data.groups[context.scene.outliner.selected_group_index]
-        self.grp_name = grp.name
         clear_group_categories(self,context)
+        self.grp_name = bpy.data.groups[context.scene.outliner.selected_group_index].name
+        if len(self.group_category) == 0:
+            self.create_new_category = True
         wm = context.window_manager
-        return wm.invoke_props_dialog(self, width=300)
+        return wm.invoke_props_dialog(self, width=350)
         
     def draw(self, context):
         layout = self.layout
@@ -304,23 +305,31 @@ class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
         else:
             path = os.path.join(get_library_path() ,self.group_category) 
         files = os.listdir(path) if os.path.exists(path) else []
+        
         if self.create_new_category:
             row = layout.split(percentage=.6)
             row.label("Enter new folder name:",icon='FILE_FOLDER')
-            row.prop(self,'create_new_category',text="Create New",icon='NEWFOLDER')
-            layout.prop(self,'new_category_name',text="",icon='FILE_FOLDER')
+            if len(self.group_category) > 0:   
+                row.prop(self,'create_new_category',text="Create New",icon='NEWFOLDER')
+            row = layout.row()
+            row.label("",icon='BLANK1')
+            row.prop(self,'new_category_name',text="",icon='FILE_FOLDER')
         else:
             row = layout.split(percentage=.6)
             row.label("Select folder to save to:",icon='FILE_FOLDER')
             row.prop(self,'create_new_category',text="Create New",icon='NEWFOLDER')
-            layout.prop(self,'group_category',text="",icon='FILE_FOLDER')
+            row = layout.row()
+            row.label("",icon='BLANK1')            
+            row.prop(self,'group_category',text="",icon='FILE_FOLDER')
+            
         layout.label("Name: " + self.grp_name)
         if self.grp_name + ".blend" in files or self.grp_name + ".png" in files:
             layout.label("File already exists",icon="ERROR")
-        if bpy.data.filepath != "" and bpy.data.is_dirty:
-            row = layout.split(percentage=.6)
-            row.label("File is not saved",icon="ERROR")
-            row.prop(self,'save_file',text="Auto Save")
+            
+#         if bpy.data.filepath != "" and bpy.data.is_dirty:
+#             row = layout.split(percentage=.6)
+#             row.label("File is not saved",icon="ERROR")
+#             row.prop(self,'save_file',text="Auto Save")
         
     def execute(self, context):
         if bpy.data.filepath == "":
@@ -328,21 +337,20 @@ class LIBRARY_OT_save_group_to_library(bpy.types.Operator):
                     
         grp_to_save = bpy.data.groups[context.scene.outliner.selected_group_index]
         if self.create_new_category:
+            if self.new_category_name == "":
+                self.report({'INFO'},"Asset not saved: Enter in a category name to save the asset to.")
+                return {'FINISHED'}             
             os.makedirs(os.path.join(get_library_path() ,self.new_category_name))
-            
             directory_to_save_to = os.path.join(get_library_path() ,self.new_category_name) 
         else:
             directory_to_save_to = os.path.join(get_library_path() ,self.group_category) 
             
-        
         thumbnail_script_path = self.create_group_thumbnail_script(directory_to_save_to, bpy.data.filepath, grp_to_save.name)
         save_script_path = self.create_group_save_script(directory_to_save_to, bpy.data.filepath, grp_to_save.name)
 
         if not os.path.exists(bpy.app.tempdir):
             os.makedirs(bpy.app.tempdir)
 
-#         subprocess.Popen(r'explorer ' + bpy.app.tempdir)
-        
         subprocess.call(bpy.app.binary_path + ' "' + utils_library.get_thumbnail_file_path() + '" -b --python "' + thumbnail_script_path + '"')   
         subprocess.call(bpy.app.binary_path + ' -b --python "' + save_script_path + '"')
         

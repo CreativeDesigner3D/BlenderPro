@@ -238,9 +238,10 @@ class LIBRARY_OT_save_object_to_library(bpy.types.Operator):
     def invoke(self,context,event):
         clear_object_categories(self,context)
         self.obj_name = bpy.data.objects[context.scene.outliner.selected_object_index].name
-#         self.obj_name = context.active_object.name
+        if len(self.object_category) == 0:
+            self.create_new_category = True
         wm = context.window_manager
-        return wm.invoke_props_dialog(self, width=300)
+        return wm.invoke_props_dialog(self, width=350)
         
     def draw(self, context):
         layout = self.layout
@@ -253,13 +254,18 @@ class LIBRARY_OT_save_object_to_library(bpy.types.Operator):
         if self.create_new_category:
             row = layout.split(percentage=.6)
             row.label("Enter new folder name:",icon='FILE_FOLDER')
-            row.prop(self,'create_new_category',text="Create New",icon='NEWFOLDER')
-            layout.prop(self,'new_category_name',text="",icon='FILE_FOLDER')
+            if len(self.object_category) > 0:   
+                row.prop(self,'create_new_category',text="Create New Folder")
+            row = layout.row()
+            row.label("",icon='BLANK1')
+            row.prop(self,'new_category_name',text="")
         else:
             row = layout.split(percentage=.6)
             row.label("Select folder to save to:",icon='FILE_FOLDER')
-            row.prop(self,'create_new_category',text="Create New",icon='NEWFOLDER')
-            layout.prop(self,'object_category',text="",icon='FILE_FOLDER')
+            row.prop(self,'create_new_category',text="Create New Folder")
+            row = layout.row()
+            row.label("",icon='BLANK1')            
+            row.prop(self,'object_category',text="")
             
         layout.label("Name: " + self.obj_name)
         
@@ -322,8 +328,10 @@ class LIBRARY_OT_save_object_to_library(bpy.types.Operator):
         
         obj_to_save = bpy.data.objects[context.scene.outliner.selected_object_index]
         if self.create_new_category:
+            if self.new_category_name == "":
+                self.report({'INFO'},"Asset not saved: Enter in a category name to save the asset to.")
+                return {'FINISHED'} 
             os.makedirs(os.path.join(get_library_path() ,self.new_category_name))
-            
             directory_to_save_to = os.path.join(get_library_path() ,self.new_category_name) 
         else:
             directory_to_save_to = os.path.join(get_library_path() ,self.object_category)         
@@ -331,8 +339,9 @@ class LIBRARY_OT_save_object_to_library(bpy.types.Operator):
         thumbnail_script_path = self.create_object_thumbnail_script(directory_to_save_to, bpy.data.filepath, obj_to_save.name)
         save_script_path = self.create_object_save_script(directory_to_save_to, bpy.data.filepath, obj_to_save.name)
 
-#         subprocess.Popen(r'explorer ' + bpy.app.tempdir)
-        
+        if not os.path.exists(bpy.app.tempdir):
+            os.makedirs(bpy.app.tempdir)
+            
         subprocess.call(bpy.app.binary_path + ' "' + utils_library.get_thumbnail_file_path() + '" -b --python "' + thumbnail_script_path + '"')   
         subprocess.call(bpy.app.binary_path + ' -b --python "' + save_script_path + '"')
         

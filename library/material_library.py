@@ -329,11 +329,10 @@ class LIBRARY_OT_save_material_to_library(bpy.types.Operator):
         return True
 
     def invoke(self,context,event):
-        mat = bpy.data.materials[context.scene.outliner.selected_material_index]
-        self.mat_name = mat.name
         clear_material_categories(self,context)
-        wm = context.window_manager
-
+        self.mat_name = bpy.data.materials[context.scene.outliner.selected_material_index].name
+        if len(self.material_category) == 0:
+            self.create_new_category = True
         wm = context.window_manager
         return wm.invoke_props_dialog(self, width=300)
         
@@ -408,25 +407,51 @@ class LIBRARY_OT_save_material_to_library(bpy.types.Operator):
         
     def draw(self, context):
         layout = self.layout
-        path = os.path.join(get_library_path() ,self.material_category) 
-        files = os.listdir(path)        
-        layout.label("Select folder to save material to")
-        layout.prop(self,'material_category',text="",icon='FILE_FOLDER')
+        if self.create_new_category:
+            path = os.path.join(get_library_path() ,self.new_category_name) 
+        else:
+            path = os.path.join(get_library_path() ,self.material_category) 
+        files = os.listdir(path) if os.path.exists(path) else []
+        
+        if self.create_new_category:
+            row = layout.split(percentage=.6)
+            row.label("Enter new folder name:",icon='FILE_FOLDER')
+            if len(self.material_category) > 0:   
+                row.prop(self,'create_new_category',text="Create New",icon='NEWFOLDER')
+            row = layout.row()
+            row.label("",icon='BLANK1')
+            row.prop(self,'new_category_name',text="",icon='FILE_FOLDER')
+        else:
+            row = layout.split(percentage=.6)
+            row.label("Select folder to save to:",icon='FILE_FOLDER')
+            row.prop(self,'create_new_category',text="Create New",icon='NEWFOLDER')
+            row = layout.row()
+            row.label("",icon='BLANK1')            
+            row.prop(self,'material_category',text="",icon='FILE_FOLDER')
+            
         layout.label("Name: " + self.mat_name)
         if self.mat_name + ".blend" in files or self.mat_name + ".png" in files:
-            layout.label("File already exists",icon="ERROR")           
+            layout.label("File already exists",icon="ERROR")
         
     def execute(self, context):
         if bpy.data.filepath == "":
             bpy.ops.wm.save_as_mainfile(filepath=os.path.join(bpy.app.tempdir,"temp_blend.blend"))
         
         mat_to_save = bpy.data.materials[context.scene.outliner.selected_material_index]
-        directory_to_save_to = os.path.join(get_library_path() ,self.material_category)
+        if self.create_new_category:
+            if self.new_category_name == "":
+                self.report({'INFO'},"Asset not saved: Enter in a category name to save the asset to.")
+                return {'FINISHED'}             
+            os.makedirs(os.path.join(get_library_path() ,self.new_category_name))
+            directory_to_save_to = os.path.join(get_library_path() ,self.new_category_name) 
+        else:
+            directory_to_save_to = os.path.join(get_library_path() ,self.material_category) 
         
         thumbnail_script_path = self.create_material_thumbnail_script(directory_to_save_to, bpy.data.filepath, mat_to_save.name)
         save_script_path = self.create_material_save_script(directory_to_save_to, bpy.data.filepath, mat_to_save.name)
         
-#         subprocess.Popen(r'explorer ' + bpy.app.tempdir)
+        if not os.path.exists(bpy.app.tempdir):
+            os.makedirs(bpy.app.tempdir)        
         
         subprocess.call(bpy.app.binary_path + ' "' + utils_library.get_thumbnail_file_path() + '" -b --python "' + thumbnail_script_path + '"')   
         subprocess.call(bpy.app.binary_path + ' -b --python "' + save_script_path + '"')
